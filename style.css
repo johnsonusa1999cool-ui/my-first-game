@@ -150,6 +150,10 @@ body {
   border: 1px solid rgba(124, 92, 255, 0.15);
 }
 
+.play-area.shake {
+  animation: screen-shake 0.25s ease;
+}
+
 .playback {
   position: relative;
   display: grid;
@@ -181,6 +185,21 @@ body {
   filter: brightness(1.08);
 }
 
+.click-button:focus-visible {
+  outline: 2px solid rgba(124, 92, 255, 0.7);
+  outline-offset: 6px;
+}
+
+.click-button.burst::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  animation: click-burst 0.4s ease-out;
+  pointer-events: none;
+}
+
 .click-button .pulse {
   position: absolute;
   inset: 0;
@@ -206,6 +225,36 @@ body {
   }
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes click-burst {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes screen-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-2px, 2px, 0);
+  }
+  40% {
+    transform: translate3d(3px, -1px, 0);
+  }
+  60% {
+    transform: translate3d(-2px, -2px, 0);
+  }
+  80% {
+    transform: translate3d(2px, 1px, 0);
   }
 }
 

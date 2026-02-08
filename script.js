@@ -17,6 +17,7 @@ const particleCanvas = document.querySelector("#particle-canvas");
 const comboLabel = document.querySelector("#combo-label");
 const comboFill = document.querySelector("#combo-fill");
 const achievementToast = document.querySelector("#achievement-toast");
+const playArea = document.querySelector("#play-area");
 
 const SAVE_KEY = "neon-clicker-save";
 
@@ -154,6 +155,24 @@ const showToast = (message) => {
 
 const updateSoundLabel = () => {
   toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
+};
+
+const triggerScreenShake = () => {
+  playArea.classList.remove("shake");
+  void playArea.offsetWidth;
+  playArea.classList.add("shake");
+  setTimeout(() => {
+    playArea.classList.remove("shake");
+  }, 250);
+};
+
+const triggerClickBurst = () => {
+  clickButton.classList.remove("burst");
+  void clickButton.offsetWidth;
+  clickButton.classList.add("burst");
+  setTimeout(() => {
+    clickButton.classList.remove("burst");
+  }, 400);
 };
 
 // Update UI when state changes
@@ -294,6 +313,8 @@ clickButton.addEventListener("click", () => {
 
   spawnFloatingPoints(earned);
   spawnParticles(8 + state.combo * 2);
+  triggerScreenShake();
+  triggerClickBurst();
   playTone(420 + state.combo * 25, 0.12);
   updateUI();
   checkAchievements();
