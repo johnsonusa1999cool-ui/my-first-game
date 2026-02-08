@@ -19,6 +19,12 @@
           <span id="score" class="value">0</span>
           <span class="per-click" id="per-click">+1 per click</span>
           <span class="per-second" id="per-second">0 / sec</span>
+          <div class="combo">
+            <span id="combo-label">Combo x1</span>
+            <div class="combo-bar">
+              <span id="combo-fill"></span>
+            </div>
+          </div>
           <div class="score-actions">
             <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
             <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
@@ -90,6 +96,8 @@
         </section>
       </main>
     </div>
+
+    <div id="achievement-toast" class="toast" aria-live="polite"></div>
 
     <script src="script.js"></script>
   </body>

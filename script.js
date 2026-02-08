@@ -14,6 +14,9 @@ const toggleSoundButton = document.querySelector("#toggle-sound");
 const resetSaveButton = document.querySelector("#reset-save");
 const walletEl = document.querySelector("#wallet");
 const particleCanvas = document.querySelector("#particle-canvas");
+const comboLabel = document.querySelector("#combo-label");
+const comboFill = document.querySelector("#combo-fill");
+const achievementToast = document.querySelector("#achievement-toast");
 
 const SAVE_KEY = "neon-clicker-save";
 
@@ -27,6 +30,10 @@ const state = {
   clickUpgradeOwned: 0,
   autoUpgradeOwned: 0,
   soundEnabled: true,
+  totalClicks: 0,
+  combo: 1,
+  lastClickAt: 0,
+  volume: 0.15,
 };
 
 // Achievement definitions
@@ -35,6 +42,8 @@ const achievements = [
   { id: "hundred", label: "100 points", goal: 100, unlocked: false },
   { id: "five-hundred", label: "500 points", goal: 500, unlocked: false },
   { id: "first-auto", label: "Automation online", goalAuto: 1, unlocked: false },
+  { id: "combo-five", label: "Combo x5!", goalCombo: 5, unlocked: false },
+  { id: "click-fiend", label: "50 clicks", goalClicks: 50, unlocked: false },
 ];
 
 let audioContext;
@@ -61,7 +70,7 @@ const playTone = (frequency, duration, type = "sine") => {
   const gain = context.createGain();
   oscillator.type = type;
   oscillator.frequency.value = frequency;
-  gain.gain.value = 0.15;
+  gain.gain.value = state.volume;
   gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
   oscillator.connect(gain);
   gain.connect(context.destination);
@@ -88,6 +97,7 @@ const spawnParticles = (amount) => {
       alpha: 1,
       velocityX: (Math.random() - 0.5) * 3,
       velocityY: -2 - Math.random() * 2,
+      hue: 150 + Math.random() * 120,
     });
   }
 };
@@ -101,7 +111,7 @@ const animateParticles = () => {
     particle.x += particle.velocityX;
     particle.y += particle.velocityY;
     particle.alpha -= 0.02;
-    ctx.fillStyle = `rgba(68, 229, 178, ${particle.alpha})`;
+    ctx.fillStyle = `hsla(${particle.hue}, 80%, 70%, ${particle.alpha})`;
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -134,6 +144,14 @@ const renderAchievements = () => {
   });
 };
 
+const showToast = (message) => {
+  achievementToast.textContent = message;
+  achievementToast.classList.add("show");
+  setTimeout(() => {
+    achievementToast.classList.remove("show");
+  }, 2000);
+};
+
 const updateSoundLabel = () => {
   toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
 };
@@ -154,6 +172,9 @@ const updateUI = () => {
   upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
   upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
   updateSoundLabel();
+
+  comboLabel.textContent = `Combo x${state.combo}`;
+  comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
 };
 
 // Visual feedback when clicking
@@ -181,15 +202,20 @@ const checkAchievements = () => {
 
     const scoreMet = achievement.goal && state.score >= achievement.goal;
     const autoMet = achievement.goalAuto && state.autoClickers >= achievement.goalAuto;
+    const comboMet = achievement.goalCombo && state.combo >= achievement.goalCombo;
+    const clickMet = achievement.goalClicks && state.totalClicks >= achievement.goalClicks;
 
-    if (scoreMet || autoMet) {
+    if (scoreMet || autoMet || comboMet || clickMet) {
       achievement.unlocked = true;
       playTone(720, 0.2, "triangle");
+      showToast(`Achievement unlocked: ${achievement.label}`);
     }
   });
 
   renderAchievements();
 };
+
+let saveTimeout;
 
 const saveGame = () => {
   const payload = {
@@ -202,9 +228,19 @@ const saveGame = () => {
     autoUpgradeOwned: state.autoUpgradeOwned,
     achievements,
     soundEnabled: state.soundEnabled,
+    totalClicks: state.totalClicks,
+    combo: state.combo,
+    lastClickAt: state.lastClickAt,
+    volume: state.volume,
   };
 
-  localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  }, 150);
 };
 
 const loadGame = () => {
@@ -223,6 +259,10 @@ const loadGame = () => {
     state.clickUpgradeOwned = payload.clickUpgradeOwned ?? state.clickUpgradeOwned;
     state.autoUpgradeOwned = payload.autoUpgradeOwned ?? state.autoUpgradeOwned;
     state.soundEnabled = payload.soundEnabled ?? state.soundEnabled;
+    state.totalClicks = payload.totalClicks ?? state.totalClicks;
+    state.combo = payload.combo ?? state.combo;
+    state.lastClickAt = payload.lastClickAt ?? state.lastClickAt;
+    state.volume = payload.volume ?? state.volume;
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
@@ -239,10 +279,22 @@ const loadGame = () => {
 
 // Handle clicks
 clickButton.addEventListener("click", () => {
-  state.score += state.pointsPerClick;
-  spawnFloatingPoints(state.pointsPerClick);
-  spawnParticles(8);
-  playTone(420, 0.12);
+  const now = Date.now();
+  if (now - state.lastClickAt < 1200) {
+    state.combo = Math.min(5, state.combo + 1);
+  } else {
+    state.combo = 1;
+  }
+  state.lastClickAt = now;
+
+  const comboBonus = state.combo >= 3 ? 1 : 0;
+  const earned = state.pointsPerClick + comboBonus;
+  state.score += earned;
+  state.totalClicks += 1;
+
+  spawnFloatingPoints(earned);
+  spawnParticles(8 + state.combo * 2);
+  playTone(420 + state.combo * 25, 0.12);
   updateUI();
   checkAchievements();
   saveGame();
@@ -304,6 +356,13 @@ setInterval(() => {
   checkAchievements();
   saveGame();
 }, 1000);
+
+setInterval(() => {
+  if (state.combo > 1 && Date.now() - state.lastClickAt > 1600) {
+    state.combo = 1;
+    updateUI();
+  }
+}, 300);
 
 window.addEventListener("resize", resizeCanvas);
 
