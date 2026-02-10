@@ -141,6 +141,10 @@ body {
 }
 
 .content {
+  width: 100%;
+}
+
+.game-layout {
   display: grid;
   grid-template-columns: minmax(320px, 1.35fr) minmax(260px, 1fr) minmax(300px, 1.05fr);
   gap: 24px;
@@ -325,11 +329,11 @@ body {
   opacity: 0.35;
 }
 
-.play-area {
+.left-panel {
   grid-column: 1;
 }
 
-.achievements {
+.center-panel {
   grid-column: 2;
 }
 
@@ -631,16 +635,16 @@ body {
 }
 
 @media (max-width: 1080px) {
-  .content {
+  .game-layout {
     grid-template-columns: 1.2fr 1fr;
   }
 
-  .play-area {
+  .left-panel {
     grid-column: 1;
   }
 
-  .shop-panel,
-  .achievements {
+  .center-panel,
+  .shop-panel {
     grid-column: 2;
   }
 }
@@ -651,13 +655,13 @@ body {
     align-items: flex-start;
   }
 
-  .content {
+  .game-layout {
     grid-template-columns: 1fr;
   }
 
-  .play-area,
-  .shop-panel,
-  .achievements {
+  .left-panel,
+  .center-panel,
+  .shop-panel {
     grid-column: 1;
   }
 
