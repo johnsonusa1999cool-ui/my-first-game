@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Clicker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Neon Clicker</p>
+          <h1>Tap. Upgrade. Automate.</h1>
+          <p class="subhead">Earn points, unlock achievements, and let the clicks roll in.</p>
+        </div>
+        <div class="score-card" aria-live="polite">
+          <span class="label">Score</span>
+          <span id="score" class="value">0</span>
+          <span class="per-click" id="per-click">+1 per click</span>
+          <span class="per-second" id="per-second">0 / sec</span>
+          <div class="combo">
+            <span id="combo-label">Combo x1</span>
+            <div class="combo-bar">
+              <span id="combo-fill"></span>
+            </div>
+          </div>
+          <div class="score-actions">
+            <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
+            <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
+            <button id="toggle-shop" class="ghost-button" type="button">Shop</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="play-area" id="play-area">
+          <div class="playback">
+            <button id="click-button" class="click-button" aria-label="Tap to gain points">
+              <span class="pulse"></span>
+              <span>Click Me</span>
+            </button>
+            <canvas id="particle-canvas" class="particle-canvas"></canvas>
+            <div class="floating-points" id="floating-points"></div>
+          </div>
+          <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
+        </section>
+
+        <section class="shop shop-panel" id="shop-panel" aria-label="Upgrades shop">
+          <div class="shop-header">
+            <div>
+              <h2>Upgrade Shop</h2>
+              <p>Boost your clicks and automate your score.</p>
+            </div>
+            <div class="wallet">
+              <span class="wallet-label">Coins</span>
+              <span id="wallet" class="wallet-value">0</span>
+            </div>
+          </div>
+          <div class="upgrade-grid">
+            <article class="upgrade-card">
+              <div class="upgrade-info">
+                <div>
+                  <h3>Power Finger</h3>
+                  <p>Increase points per click.</p>
+                </div>
+                <div class="upgrade-meta">
+                  <span id="upgrade-click-owned">Owned: 0</span>
+                  <span class="upgrade-tier">Tier 1</span>
+                </div>
+              </div>
+              <button id="upgrade-click" class="upgrade-button" type="button">
+                Buy <span id="upgrade-click-cost">10</span>
+              </button>
+            </article>
+            <article class="upgrade-card">
+              <div class="upgrade-info">
+                <div>
+                  <h3>Auto Clicker</h3>
+                  <p>Earn points every second.</p>
+                </div>
+                <div class="upgrade-meta">
+                  <span id="upgrade-auto-owned">Owned: 0</span>
+                  <span class="upgrade-tier">Tier 1</span>
+                </div>
+              </div>
+              <button id="upgrade-auto" class="upgrade-button" type="button">
+                Buy <span id="upgrade-auto-cost">25</span>
+              </button>
+            </article>
+            <article class="upgrade-card">
+              <div class="upgrade-info">
+                <div>
+                  <h3>Critical Spark</h3>
+                  <p>Chance to double click power.</p>
+                </div>
+                <div class="upgrade-meta">
+                  <span id="upgrade-crit-owned">Owned: 0</span>
+                  <span class="upgrade-tier">Tier 1</span>
+                </div>
+              </div>
+              <button id="upgrade-crit" class="upgrade-button" type="button">
+                Buy <span id="upgrade-crit-cost">40</span>
+              </button>
+            </article>
+            <article class="upgrade-card">
+              <div class="upgrade-info">
+                <div>
+                  <h3>Speed Core</h3>
+                  <p>Faster click burst animation.</p>
+                </div>
+                <div class="upgrade-meta">
+                  <span id="upgrade-speed-owned">Owned: 0</span>
+                  <span class="upgrade-tier">Tier 1</span>
+                </div>
+              </div>
+              <button id="upgrade-speed" class="upgrade-button" type="button">
+                Buy <span id="upgrade-speed-cost">30</span>
+              </button>
+            </article>
+          </div>
+        </section>
+
+        <section class="achievements" aria-label="Achievements">
+          <h2>Achievements</h2>
+          <ul id="achievement-list" class="achievement-list"></ul>
+        </section>
+      </main>
+    </div>
+
+    <div id="achievement-toast" class="toast" aria-live="polite"></div>
+    <div id="offline-popup" class="offline-popup" aria-live="polite">
+      <p class="offline-title">Welcome back!</p>
+      <p id="offline-message">While you were away you earned 0 points</p>
+      <button id="offline-claim" class="ghost-button" type="button">Claim</button>
+    </div>
+
+
+    <script src="script.js"></script>
+  </body>
+</html>
