@@ -90,12 +90,15 @@ const updateAnimatedScore = () => {
 
 // Achievement definitions
 const achievements = [
-  { id: "first-click", label: "First tap!", goal: 1, unlocked: false },
-  { id: "hundred", label: "100 points", goal: 100, unlocked: false },
-  { id: "five-hundred", label: "500 points", goal: 500, unlocked: false },
-  { id: "first-auto", label: "Automation online", goalAuto: 1, unlocked: false },
-  { id: "combo-five", label: "Combo x5!", goalCombo: 5, unlocked: false },
-  { id: "click-fiend", label: "50 clicks", goalClicks: 50, unlocked: false },
+  { id: "first-click", label: "First tap!", type: "clicks", target: 1, unlocked: false },
+  { id: "click-fiend", label: "50 clicks", type: "clicks", target: 50, unlocked: false },
+  { id: "tap-machine", label: "500 clicks", type: "clicks", target: 500, unlocked: false },
+  { id: "hundred", label: "100 points", type: "score", target: 100, unlocked: false },
+  { id: "five-k", label: "5K points", type: "score", target: 5000, unlocked: false },
+  { id: "fifty-k", label: "50K points", type: "score", target: 50000, unlocked: false },
+  { id: "upgrade-hunter", label: "Buy 5 upgrades", type: "upgrades", target: 5, unlocked: false },
+  { id: "upgrade-master", label: "Buy 20 upgrades", type: "upgrades", target: 20, unlocked: false },
+  { id: "first-auto", label: "Automation online", type: "auto", target: 1, unlocked: false },
 ];
 
 let audioContext;
@@ -180,6 +183,30 @@ const animateParticles = () => {
   requestAnimationFrame(animateParticles);
 };
 
+
+
+const getTotalUpgradesBought = () =>
+  state.clickUpgradeOwned +
+  state.autoUpgradeOwned +
+  state.critUpgradeOwned +
+  state.speedUpgradeOwned;
+
+const getAchievementProgress = (achievement) => {
+  if (achievement.type === "clicks") {
+    return { current: state.totalClicks, target: achievement.target };
+  }
+  if (achievement.type === "score") {
+    return { current: state.score, target: achievement.target };
+  }
+  if (achievement.type === "upgrades") {
+    return { current: getTotalUpgradesBought(), target: achievement.target };
+  }
+  if (achievement.type === "auto") {
+    return { current: state.autoClickers, target: achievement.target };
+  }
+  return { current: 0, target: achievement.target };
+};
+
 // Render achievements list
 const renderAchievements = () => {
   achievementList.innerHTML = "";
@@ -189,9 +216,10 @@ const renderAchievements = () => {
     if (achievement.unlocked) {
       item.classList.add("unlocked");
     }
+    const progress = getAchievementProgress(achievement);
     item.innerHTML = `
       <span>${achievement.label}</span>
-      <span>${achievement.unlocked ? "Unlocked" : "Locked"}</span>
+      <span>${achievement.unlocked ? "Unlocked" : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`}</span>
     `;
     achievementList.appendChild(item);
   });
@@ -338,12 +366,8 @@ const checkAchievements = () => {
       return;
     }
 
-    const scoreMet = achievement.goal && state.score >= achievement.goal;
-    const autoMet = achievement.goalAuto && state.autoClickers >= achievement.goalAuto;
-    const comboMet = achievement.goalCombo && state.combo >= achievement.goalCombo;
-    const clickMet = achievement.goalClicks && state.totalClicks >= achievement.goalClicks;
-
-    if (scoreMet || autoMet || comboMet || clickMet) {
+    const progress = getAchievementProgress(achievement);
+    if (progress.current >= progress.target) {
       achievement.unlocked = true;
       playTone(720, 0.2, "triangle");
       showToast(`Achievement unlocked: ${achievement.label}`);
