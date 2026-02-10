@@ -9,15 +9,23 @@ const upgradeClickCostEl = document.querySelector("#upgrade-click-cost");
 const upgradeAutoCostEl = document.querySelector("#upgrade-auto-cost");
 const upgradeClickOwnedEl = document.querySelector("#upgrade-click-owned");
 const upgradeAutoOwnedEl = document.querySelector("#upgrade-auto-owned");
+const upgradeCritButton = document.querySelector("#upgrade-crit");
+const upgradeSpeedButton = document.querySelector("#upgrade-speed");
+const upgradeCritCostEl = document.querySelector("#upgrade-crit-cost");
+const upgradeSpeedCostEl = document.querySelector("#upgrade-speed-cost");
+const upgradeCritOwnedEl = document.querySelector("#upgrade-crit-owned");
+const upgradeSpeedOwnedEl = document.querySelector("#upgrade-speed-owned");
 const achievementList = document.querySelector("#achievement-list");
 const toggleSoundButton = document.querySelector("#toggle-sound");
 const resetSaveButton = document.querySelector("#reset-save");
+const toggleShopButton = document.querySelector("#toggle-shop");
 const walletEl = document.querySelector("#wallet");
 const particleCanvas = document.querySelector("#particle-canvas");
 const comboLabel = document.querySelector("#combo-label");
 const comboFill = document.querySelector("#combo-fill");
 const achievementToast = document.querySelector("#achievement-toast");
 const playArea = document.querySelector("#play-area");
+const shopPanel = document.querySelector("#shop-panel");
 
 const SAVE_KEY = "neon-clicker-save";
 
@@ -30,11 +38,18 @@ const state = {
   autoUpgradeCost: 25,
   clickUpgradeOwned: 0,
   autoUpgradeOwned: 0,
+  critChance: 0,
+  critUpgradeCost: 40,
+  critUpgradeOwned: 0,
+  speedUpgradeCost: 30,
+  speedUpgradeOwned: 0,
+  clickBurstDuration: 0.4,
   soundEnabled: true,
   totalClicks: 0,
   combo: 1,
   lastClickAt: 0,
   volume: 0.15,
+  shopOpen: true,
 };
 
 // Achievement definitions
@@ -157,6 +172,27 @@ const updateSoundLabel = () => {
   toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
 };
 
+const updateShopState = () => {
+  if (state.shopOpen) {
+    shopPanel.classList.remove("is-collapsed");
+  } else {
+    shopPanel.classList.add("is-collapsed");
+  }
+};
+
+const animatePurchase = (button) => {
+  const card = button.closest(".upgrade-card");
+  if (!card) {
+    return;
+  }
+  card.classList.remove("purchased");
+  void card.offsetWidth;
+  card.classList.add("purchased");
+  setTimeout(() => {
+    card.classList.remove("purchased");
+  }, 500);
+};
+
 const triggerScreenShake = () => {
   playArea.classList.remove("shake");
   void playArea.offsetWidth;
@@ -187,20 +223,31 @@ const updateUI = () => {
   upgradeAutoCostEl.textContent = state.autoUpgradeCost;
   upgradeClickOwnedEl.textContent = `Owned: ${state.clickUpgradeOwned}`;
   upgradeAutoOwnedEl.textContent = `Owned: ${state.autoUpgradeOwned}`;
+  upgradeCritCostEl.textContent = state.critUpgradeCost;
+  upgradeSpeedCostEl.textContent = state.speedUpgradeCost;
+  upgradeCritOwnedEl.textContent = `Owned: ${state.critUpgradeOwned}`;
+  upgradeSpeedOwnedEl.textContent = `Owned: ${state.speedUpgradeOwned}`;
 
   upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
   upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
+  upgradeCritButton.disabled = state.score < state.critUpgradeCost;
+  upgradeSpeedButton.disabled = state.score < state.speedUpgradeCost;
   updateSoundLabel();
+  updateShopState();
 
   comboLabel.textContent = `Combo x${state.combo}`;
   comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
+  clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
 };
 
 // Visual feedback when clicking
-const spawnFloatingPoints = (amount) => {
+const spawnFloatingPoints = (amount, isCrit = false) => {
   const point = document.createElement("span");
   point.className = "floating-point";
-  point.textContent = `+${amount}`;
+  point.textContent = isCrit ? `+${amount} CRIT!` : `+${amount}`;
+  if (isCrit) {
+    point.style.color = "var(--accent-strong)";
+  }
   const offsetX = 40 + Math.random() * 80;
   const offsetY = 40 + Math.random() * 80;
   point.style.left = `${offsetX}px`;
@@ -245,12 +292,19 @@ const saveGame = () => {
     autoUpgradeCost: state.autoUpgradeCost,
     clickUpgradeOwned: state.clickUpgradeOwned,
     autoUpgradeOwned: state.autoUpgradeOwned,
+    critChance: state.critChance,
+    critUpgradeCost: state.critUpgradeCost,
+    critUpgradeOwned: state.critUpgradeOwned,
+    speedUpgradeCost: state.speedUpgradeCost,
+    speedUpgradeOwned: state.speedUpgradeOwned,
+    clickBurstDuration: state.clickBurstDuration,
     achievements,
     soundEnabled: state.soundEnabled,
     totalClicks: state.totalClicks,
     combo: state.combo,
     lastClickAt: state.lastClickAt,
     volume: state.volume,
+    shopOpen: state.shopOpen,
   };
 
   if (saveTimeout) {
@@ -277,11 +331,18 @@ const loadGame = () => {
     state.autoUpgradeCost = payload.autoUpgradeCost ?? state.autoUpgradeCost;
     state.clickUpgradeOwned = payload.clickUpgradeOwned ?? state.clickUpgradeOwned;
     state.autoUpgradeOwned = payload.autoUpgradeOwned ?? state.autoUpgradeOwned;
+    state.critChance = payload.critChance ?? state.critChance;
+    state.critUpgradeCost = payload.critUpgradeCost ?? state.critUpgradeCost;
+    state.critUpgradeOwned = payload.critUpgradeOwned ?? state.critUpgradeOwned;
+    state.speedUpgradeCost = payload.speedUpgradeCost ?? state.speedUpgradeCost;
+    state.speedUpgradeOwned = payload.speedUpgradeOwned ?? state.speedUpgradeOwned;
+    state.clickBurstDuration = payload.clickBurstDuration ?? state.clickBurstDuration;
     state.soundEnabled = payload.soundEnabled ?? state.soundEnabled;
     state.totalClicks = payload.totalClicks ?? state.totalClicks;
     state.combo = payload.combo ?? state.combo;
     state.lastClickAt = payload.lastClickAt ?? state.lastClickAt;
     state.volume = payload.volume ?? state.volume;
+    state.shopOpen = payload.shopOpen ?? state.shopOpen;
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
@@ -307,15 +368,17 @@ clickButton.addEventListener("click", () => {
   state.lastClickAt = now;
 
   const comboBonus = state.combo >= 3 ? 1 : 0;
-  const earned = state.pointsPerClick + comboBonus;
+  const isCrit = Math.random() < state.critChance;
+  const critMultiplier = isCrit ? 2 : 1;
+  const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
   state.score += earned;
   state.totalClicks += 1;
 
-  spawnFloatingPoints(earned);
+  spawnFloatingPoints(earned, isCrit);
   spawnParticles(8 + state.combo * 2);
   triggerScreenShake();
   triggerClickBurst();
-  playTone(420 + state.combo * 25, 0.12);
+  playTone(isCrit ? 880 : 420 + state.combo * 25, 0.12);
   updateUI();
   checkAchievements();
   saveGame();
@@ -333,6 +396,7 @@ upgradeClickButton.addEventListener("click", () => {
   state.clickUpgradeOwned += 1;
   spawnParticles(14);
   playTone(520, 0.18, "square");
+  animatePurchase(upgradeClickButton);
   updateUI();
   saveGame();
 });
@@ -349,8 +413,41 @@ upgradeAutoButton.addEventListener("click", () => {
   state.autoUpgradeOwned += 1;
   spawnParticles(16);
   playTone(620, 0.2, "square");
+  animatePurchase(upgradeAutoButton);
   updateUI();
   checkAchievements();
+  saveGame();
+});
+
+upgradeCritButton.addEventListener("click", () => {
+  if (state.score < state.critUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.critUpgradeCost;
+  state.critChance = Math.min(0.45, state.critChance + 0.05);
+  state.critUpgradeCost = Math.floor(state.critUpgradeCost * 1.8);
+  state.critUpgradeOwned += 1;
+  spawnParticles(18);
+  playTone(760, 0.2, "triangle");
+  animatePurchase(upgradeCritButton);
+  updateUI();
+  saveGame();
+});
+
+upgradeSpeedButton.addEventListener("click", () => {
+  if (state.score < state.speedUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.speedUpgradeCost;
+  state.clickBurstDuration = Math.max(0.2, state.clickBurstDuration - 0.04);
+  state.speedUpgradeCost = Math.floor(state.speedUpgradeCost * 1.7);
+  state.speedUpgradeOwned += 1;
+  spawnParticles(12);
+  playTone(640, 0.16, "square");
+  animatePurchase(upgradeSpeedButton);
+  updateUI();
   saveGame();
 });
 
@@ -363,6 +460,12 @@ toggleSoundButton.addEventListener("click", () => {
 resetSaveButton.addEventListener("click", () => {
   localStorage.removeItem(SAVE_KEY);
   window.location.reload();
+});
+
+toggleShopButton.addEventListener("click", () => {
+  state.shopOpen = !state.shopOpen;
+  updateShopState();
+  saveGame();
 });
 
 // Auto clicker loop
