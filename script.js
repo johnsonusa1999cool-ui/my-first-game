@@ -26,8 +26,13 @@ const comboFill = document.querySelector("#combo-fill");
 const achievementToast = document.querySelector("#achievement-toast");
 const playArea = document.querySelector("#play-area");
 const shopPanel = document.querySelector("#shop-panel");
+const offlinePopup = document.querySelector("#offline-popup");
+const offlineMessage = document.querySelector("#offline-message");
+const offlineClaimButton = document.querySelector("#offline-claim");
 
 const SAVE_KEY = "neon-clicker-save";
+const LAST_PLAYED_KEY = "neon-clicker-last-played";
+const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 
 // Core game state
 const state = {
@@ -50,6 +55,37 @@ const state = {
   lastClickAt: 0,
   volume: 0.15,
   shopOpen: true,
+};
+
+let displayedScore = 0;
+
+const formatNumber = (value) => {
+  const absValue = Math.abs(value);
+  if (absValue < 1000) {
+    return Math.floor(value).toString();
+  }
+
+  const suffixes = [
+    { limit: 1e12, suffix: "T" },
+    { limit: 1e9, suffix: "B" },
+    { limit: 1e6, suffix: "M" },
+    { limit: 1e3, suffix: "K" },
+  ];
+
+  const matched = suffixes.find((entry) => absValue >= entry.limit);
+  const shortValue = value / matched.limit;
+  const precision = shortValue >= 100 ? 0 : shortValue >= 10 ? 1 : 2;
+  return `${shortValue.toFixed(precision)}${matched.suffix}`;
+};
+
+const updateAnimatedScore = () => {
+  displayedScore += (state.score - displayedScore) * 0.16;
+  if (Math.abs(state.score - displayedScore) < 0.05) {
+    displayedScore = state.score;
+  }
+
+  scoreEl.textContent = formatNumber(displayedScore);
+  walletEl.textContent = formatNumber(displayedScore);
 };
 
 // Achievement definitions
@@ -140,6 +176,7 @@ const animateParticles = () => {
   }
 
   ctx.restore();
+  updateAnimatedScore();
   requestAnimationFrame(animateParticles);
 };
 
@@ -172,6 +209,35 @@ const updateSoundLabel = () => {
   toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
 };
 
+
+const showOfflinePopup = (earned) => {
+  offlineMessage.textContent = `While you were away you earned ${formatNumber(earned)} points`;
+  offlinePopup.classList.add("show");
+};
+
+const checkOfflineEarnings = () => {
+  const lastPlayedRaw = localStorage.getItem(LAST_PLAYED_KEY);
+  if (!lastPlayedRaw) {
+    return;
+  }
+
+  const lastPlayed = Number(lastPlayedRaw);
+  if (Number.isNaN(lastPlayed)) {
+    return;
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - lastPlayed) / 1000));
+  const effectiveSeconds = Math.min(elapsedSeconds, MAX_OFFLINE_SECONDS);
+  const passivePerSecond = state.autoClickers * state.pointsPerClick;
+  const offlineEarned = Math.floor(effectiveSeconds * passivePerSecond);
+
+  if (offlineEarned > 0) {
+    state.score += offlineEarned;
+    spawnParticles(24);
+    showOfflinePopup(offlineEarned);
+  }
+};
+
 const updateShopState = () => {
   if (state.shopOpen) {
     shopPanel.classList.remove("is-collapsed");
@@ -202,6 +268,15 @@ const triggerScreenShake = () => {
   }, 250);
 };
 
+const triggerCriticalShake = () => {
+  playArea.classList.remove("crit-shake");
+  void playArea.offsetWidth;
+  playArea.classList.add("crit-shake");
+  setTimeout(() => {
+    playArea.classList.remove("crit-shake");
+  }, 180);
+};
+
 const triggerClickBurst = () => {
   clickButton.classList.remove("burst");
   void clickButton.offsetWidth;
@@ -213,18 +288,15 @@ const triggerClickBurst = () => {
 
 // Update UI when state changes
 const updateUI = () => {
-  const roundedScore = Math.floor(state.score);
-  scoreEl.textContent = roundedScore;
-  walletEl.textContent = roundedScore;
-  perClickEl.textContent = `+${state.pointsPerClick} per click`;
-  perSecondEl.textContent = `${state.autoClickers * state.pointsPerClick} / sec`;
+  perClickEl.textContent = `+${formatNumber(state.pointsPerClick)} per click`;
+  perSecondEl.textContent = `${formatNumber(state.autoClickers * state.pointsPerClick)} / sec`;
 
-  upgradeClickCostEl.textContent = state.clickUpgradeCost;
-  upgradeAutoCostEl.textContent = state.autoUpgradeCost;
+  upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
+  upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
   upgradeClickOwnedEl.textContent = `Owned: ${state.clickUpgradeOwned}`;
   upgradeAutoOwnedEl.textContent = `Owned: ${state.autoUpgradeOwned}`;
-  upgradeCritCostEl.textContent = state.critUpgradeCost;
-  upgradeSpeedCostEl.textContent = state.speedUpgradeCost;
+  upgradeCritCostEl.textContent = formatNumber(state.critUpgradeCost);
+  upgradeSpeedCostEl.textContent = formatNumber(state.speedUpgradeCost);
   upgradeCritOwnedEl.textContent = `Owned: ${state.critUpgradeOwned}`;
   upgradeSpeedOwnedEl.textContent = `Owned: ${state.speedUpgradeOwned}`;
 
@@ -244,9 +316,9 @@ const updateUI = () => {
 const spawnFloatingPoints = (amount, isCrit = false) => {
   const point = document.createElement("span");
   point.className = "floating-point";
-  point.textContent = isCrit ? `+${amount} CRIT!` : `+${amount}`;
+  point.textContent = isCrit ? `+${formatNumber(amount)} CRIT!` : `+${formatNumber(amount)}`;
   if (isCrit) {
-    point.style.color = "var(--accent-strong)";
+    point.classList.add("crit");
   }
   const offsetX = 40 + Math.random() * 80;
   const offsetY = 40 + Math.random() * 80;
@@ -313,6 +385,7 @@ const saveGame = () => {
 
   saveTimeout = setTimeout(() => {
     localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
   }, 150);
 };
 
@@ -377,6 +450,9 @@ clickButton.addEventListener("click", () => {
   spawnFloatingPoints(earned, isCrit);
   spawnParticles(8 + state.combo * 2);
   triggerScreenShake();
+  if (isCrit) {
+    triggerCriticalShake();
+  }
   triggerClickBurst();
   playTone(isCrit ? 880 : 420 + state.combo * 25, 0.12);
   updateUI();
@@ -468,6 +544,14 @@ toggleShopButton.addEventListener("click", () => {
   saveGame();
 });
 
+offlineClaimButton.addEventListener("click", () => {
+  offlinePopup.classList.remove("show");
+});
+
+window.addEventListener("beforeunload", () => {
+  localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
+});
+
 // Auto clicker loop
 setInterval(() => {
   if (state.autoClickers === 0) {
@@ -491,7 +575,10 @@ setInterval(() => {
 window.addEventListener("resize", resizeCanvas);
 
 loadGame();
+checkOfflineEarnings();
+displayedScore = state.score;
 resizeCanvas();
 renderAchievements();
 updateUI();
+saveGame();
 requestAnimationFrame(animateParticles);

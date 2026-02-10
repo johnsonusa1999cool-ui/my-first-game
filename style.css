@@ -156,6 +156,10 @@ body {
   animation: screen-shake 0.25s ease;
 }
 
+.play-area.crit-shake {
+  animation: crit-shake 0.18s ease;
+}
+
 .playback {
   position: relative;
   display: grid;
@@ -269,6 +273,22 @@ body {
   }
   80% {
     transform: translate3d(2px, 1px, 0);
+  }
+}
+
+@keyframes crit-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  50% {
+    transform: translate3d(3px, 0, 0);
+  }
+  75% {
+    transform: translate3d(-2px, 0, 0);
   }
 }
 
@@ -457,6 +477,12 @@ body {
   animation: float-up 1.2s ease-out forwards;
 }
 
+.floating-point.crit {
+  color: var(--accent-strong);
+  font-size: 1.1rem;
+  text-shadow: 0 0 12px rgba(154, 125, 255, 0.75);
+}
+
 .particle-canvas {
   position: absolute;
   inset: 0;
@@ -473,6 +499,80 @@ body {
   to {
     transform: translateY(-50px) scale(1.1);
     opacity: 0;
+  }
+}
+
+
+.offline-popup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 13, 21, 0.72);
+  backdrop-filter: blur(2px);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.offline-popup > * {
+  pointer-events: auto;
+}
+
+.offline-popup {
+  text-align: center;
+}
+
+.offline-popup .offline-title,
+.offline-popup #offline-message,
+.offline-popup #offline-claim {
+  background: var(--card);
+}
+
+.offline-popup .offline-title {
+  display: block;
+  padding: 18px 28px 8px;
+  border-radius: 18px 18px 0 0;
+  border: 1px solid rgba(124, 92, 255, 0.3);
+  border-bottom: none;
+  font-size: 1.2rem;
+}
+
+.offline-popup #offline-message {
+  display: block;
+  padding: 0 28px 16px;
+  border-left: 1px solid rgba(124, 92, 255, 0.3);
+  border-right: 1px solid rgba(124, 92, 255, 0.3);
+}
+
+.offline-popup #offline-claim {
+  border-radius: 0 0 18px 18px;
+  border: 1px solid rgba(124, 92, 255, 0.3);
+  border-top: none;
+  padding: 12px 20px;
+  width: 100%;
+}
+
+.offline-popup.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.offline-popup.show .offline-title,
+.offline-popup.show #offline-message,
+.offline-popup.show #offline-claim {
+  animation: offline-pop 0.35s ease;
+}
+
+@keyframes offline-pop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
