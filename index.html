@@ -19,6 +19,7 @@
           <span id="score" class="value">0</span>
           <span class="per-click" id="per-click">+1 per click</span>
           <span class="per-second" id="per-second">0 / sec</span>
+          <span class="prestige-label" id="prestige-label">Prestige: 0 (x1.0)</span>
           <div class="combo">
             <span id="combo-label">Combo x1</span>
             <div class="combo-bar">
@@ -29,6 +30,7 @@
             <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
             <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
             <button id="toggle-shop" class="ghost-button" type="button">Shop</button>
+            <button id="open-prestige" class="ghost-button" type="button">Prestige</button>
           </div>
         </div>
       </header>
@@ -135,6 +137,15 @@
       <button id="offline-claim" class="ghost-button" type="button">Claim</button>
     </div>
 
+
+    <div id="prestige-popup" class="offline-popup" aria-live="polite">
+      <p class="offline-title">Ascend?</p>
+      <p id="prestige-message">Reset progress for prestige points.</p>
+      <div class="prestige-actions">
+        <button id="prestige-cancel" class="ghost-button" type="button">Cancel</button>
+        <button id="prestige-confirm" class="ghost-button" type="button">Confirm</button>
+      </div>
+    </div>
 
     <script src="script.js"></script>
   </body>

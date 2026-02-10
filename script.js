@@ -29,6 +29,12 @@ const shopPanel = document.querySelector("#shop-panel");
 const offlinePopup = document.querySelector("#offline-popup");
 const offlineMessage = document.querySelector("#offline-message");
 const offlineClaimButton = document.querySelector("#offline-claim");
+const prestigeLabel = document.querySelector("#prestige-label");
+const openPrestigeButton = document.querySelector("#open-prestige");
+const prestigePopup = document.querySelector("#prestige-popup");
+const prestigeMessage = document.querySelector("#prestige-message");
+const prestigeCancelButton = document.querySelector("#prestige-cancel");
+const prestigeConfirmButton = document.querySelector("#prestige-confirm");
 
 const SAVE_KEY = "neon-clicker-save";
 const LAST_PLAYED_KEY = "neon-clicker-last-played";
@@ -55,6 +61,8 @@ const state = {
   lastClickAt: 0,
   volume: 0.15,
   shopOpen: true,
+  prestigePoints: 0,
+  totalEarnedThisRun: 0,
 };
 
 let displayedScore = 0;
@@ -86,6 +94,49 @@ const updateAnimatedScore = () => {
 
   scoreEl.textContent = formatNumber(displayedScore);
   walletEl.textContent = formatNumber(displayedScore);
+};
+
+
+const getPrestigeMultiplier = () => 1 + state.prestigePoints * 0.1;
+
+const addScore = (baseAmount) => {
+  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier());
+  state.score += boostedAmount;
+  state.totalEarnedThisRun += boostedAmount;
+  return boostedAmount;
+};
+
+const getPrestigeGain = () => Math.floor(Math.sqrt(state.totalEarnedThisRun / 50000));
+
+const updatePrestigeLabel = () => {
+  prestigeLabel.textContent = `Prestige: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
+};
+
+const resetProgressForPrestige = () => {
+  state.score = 0;
+  state.pointsPerClick = 1;
+  state.autoClickers = 0;
+  state.clickUpgradeCost = 10;
+  state.autoUpgradeCost = 25;
+  state.clickUpgradeOwned = 0;
+  state.autoUpgradeOwned = 0;
+  state.critChance = 0;
+  state.critUpgradeCost = 40;
+  state.critUpgradeOwned = 0;
+  state.speedUpgradeCost = 30;
+  state.speedUpgradeOwned = 0;
+  state.clickBurstDuration = 0.4;
+  state.totalClicks = 0;
+  state.combo = 1;
+  state.totalEarnedThisRun = 0;
+
+  achievements.forEach((achievement) => {
+    achievement.unlocked = false;
+  });
+
+  renderAchievements();
+  updateUI();
+  saveGame();
 };
 
 // Achievement definitions
@@ -260,9 +311,9 @@ const checkOfflineEarnings = () => {
   const offlineEarned = Math.floor(effectiveSeconds * passivePerSecond);
 
   if (offlineEarned > 0) {
-    state.score += offlineEarned;
+    const finalOfflineEarned = addScore(offlineEarned);
     spawnParticles(24);
-    showOfflinePopup(offlineEarned);
+    showOfflinePopup(finalOfflineEarned);
   }
 };
 
@@ -338,6 +389,7 @@ const updateUI = () => {
   comboLabel.textContent = `Combo x${state.combo}`;
   comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
   clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
+  updatePrestigeLabel();
 };
 
 // Visual feedback when clicking
@@ -401,6 +453,8 @@ const saveGame = () => {
     lastClickAt: state.lastClickAt,
     volume: state.volume,
     shopOpen: state.shopOpen,
+    prestigePoints: state.prestigePoints,
+    totalEarnedThisRun: state.totalEarnedThisRun,
   };
 
   if (saveTimeout) {
@@ -440,6 +494,8 @@ const loadGame = () => {
     state.lastClickAt = payload.lastClickAt ?? state.lastClickAt;
     state.volume = payload.volume ?? state.volume;
     state.shopOpen = payload.shopOpen ?? state.shopOpen;
+    state.prestigePoints = payload.prestigePoints ?? state.prestigePoints;
+    state.totalEarnedThisRun = payload.totalEarnedThisRun ?? state.totalEarnedThisRun;
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
@@ -468,10 +524,10 @@ clickButton.addEventListener("click", () => {
   const isCrit = Math.random() < state.critChance;
   const critMultiplier = isCrit ? 2 : 1;
   const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
-  state.score += earned;
+  const finalEarned = addScore(earned);
   state.totalClicks += 1;
 
-  spawnFloatingPoints(earned, isCrit);
+  spawnFloatingPoints(finalEarned, isCrit);
   spawnParticles(8 + state.combo * 2);
   triggerScreenShake();
   if (isCrit) {
@@ -568,6 +624,33 @@ toggleShopButton.addEventListener("click", () => {
   saveGame();
 });
 
+openPrestigeButton.addEventListener("click", () => {
+  const gain = getPrestigeGain();
+  if (gain <= 0) {
+    showToast("Earn more score to unlock prestige");
+    return;
+  }
+  prestigeMessage.textContent = `Reset progress and gain +${gain} prestige points?`;
+  prestigePopup.classList.add("show");
+});
+
+prestigeCancelButton.addEventListener("click", () => {
+  prestigePopup.classList.remove("show");
+});
+
+prestigeConfirmButton.addEventListener("click", () => {
+  const gain = getPrestigeGain();
+  if (gain <= 0) {
+    prestigePopup.classList.remove("show");
+    return;
+  }
+
+  state.prestigePoints += gain;
+  prestigePopup.classList.remove("show");
+  showToast(`Prestige +${gain}! Permanent multiplier increased.`);
+  resetProgressForPrestige();
+});
+
 offlineClaimButton.addEventListener("click", () => {
   offlinePopup.classList.remove("show");
 });
@@ -582,7 +665,7 @@ setInterval(() => {
     return;
   }
 
-  state.score += state.autoClickers * state.pointsPerClick;
+  addScore(state.autoClickers * state.pointsPerClick);
   spawnParticles(4 + state.autoClickers);
   updateUI();
   checkAchievements();

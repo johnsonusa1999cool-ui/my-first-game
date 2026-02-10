@@ -82,9 +82,14 @@ body {
 }
 
 .per-click,
-.per-second {
+.per-second,
+.prestige-label {
   font-size: 0.85rem;
   color: var(--success);
+}
+
+.prestige-label {
+  color: var(--accent-strong);
 }
 
 .combo {
@@ -557,6 +562,26 @@ body {
 .offline-popup.show {
   opacity: 1;
   pointer-events: auto;
+}
+
+
+.prestige-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.prestige-actions .ghost-button {
+  border-radius: 0;
+}
+
+#prestige-cancel {
+  border-radius: 0 0 0 18px;
+}
+
+#prestige-confirm {
+  border-radius: 0 0 18px 0;
+  color: var(--success);
 }
 
 .offline-popup.show .offline-title,
