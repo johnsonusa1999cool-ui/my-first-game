@@ -549,52 +549,8 @@ body {
   opacity: 0;
   pointer-events: none;
   isolation: isolate;
-  transition: opacity 0.25s ease;
-}
-
-.offline-popup-content {
-  position: relative;
-  z-index: 2;
-  pointer-events: auto;
-}
-
-.offline-popup {
-  text-align: center;
-}
-
-.offline-popup .offline-title,
-.offline-popup #offline-message,
-.offline-popup #offline-claim {
-  background: var(--card);
-}
-
-.offline-popup .offline-title {
-  display: block;
-  padding: 18px 28px 8px;
-  border-radius: 18px 18px 0 0;
-  border: 1px solid rgba(124, 92, 255, 0.3);
-  border-bottom: none;
-  font-size: 1.2rem;
-}
-
-.offline-popup #offline-message {
-  display: block;
-  padding: 0 28px 16px;
-  border-left: 1px solid rgba(124, 92, 255, 0.3);
-  border-right: 1px solid rgba(124, 92, 255, 0.3);
-}
-
-.offline-popup #offline-claim {
-  border-radius: 0 0 18px 18px;
-  border: 1px solid rgba(124, 92, 255, 0.3);
-  border-top: none;
-  padding: 12px 20px;
-  width: 100%;
-  position: relative;
-  z-index: 2;
-  pointer-events: auto;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.22s ease;
+  padding: 16px;
 }
 
 .offline-popup.show {
@@ -602,6 +558,103 @@ body {
   pointer-events: auto;
 }
 
+.offline-popup-content {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  width: min(420px, 100%);
+}
+
+#offline-popup .offline-popup-content {
+  background: linear-gradient(180deg, rgba(27, 29, 48, 0.98), rgba(20, 22, 38, 0.98));
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(124, 92, 255, 0.28);
+  text-align: center;
+  padding: 22px 20px 18px;
+  transform: scale(0.94);
+  opacity: 0;
+}
+
+#offline-popup.show .offline-popup-content {
+  animation: offline-modal-in 0.24s ease forwards;
+}
+
+#offline-popup.closing .offline-popup-content {
+  animation: offline-modal-out 0.2s ease forwards;
+}
+
+#offline-popup .offline-title {
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+}
+
+#offline-popup .offline-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+#offline-popup .offline-earned {
+  margin-top: 10px;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 800;
+  color: var(--accent-strong);
+  text-shadow: 0 0 16px rgba(154, 125, 255, 0.45);
+}
+
+#offline-popup .offline-time {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+#offline-popup #offline-claim {
+  margin-top: 14px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(124, 92, 255, 0.45);
+  background: rgba(124, 92, 255, 0.18);
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#offline-popup #offline-claim:hover {
+  background: rgba(124, 92, 255, 0.3);
+}
+
+#prestige-popup .offline-popup-content {
+  text-align: center;
+}
+
+@keyframes offline-modal-in {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes offline-modal-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
 
 .prestige-actions {
   display: grid;
@@ -622,22 +675,6 @@ body {
   color: var(--success);
 }
 
-.offline-popup.show .offline-title,
-.offline-popup.show #offline-message,
-.offline-popup.show #offline-claim {
-  animation: offline-pop 0.35s ease;
-}
-
-@keyframes offline-pop {
-  0% {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
 
 .toast {
   position: fixed;

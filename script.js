@@ -27,7 +27,8 @@ const achievementToast = document.querySelector("#achievement-toast");
 const playArea = document.querySelector("#play-area");
 const shopPanel = document.querySelector("#shop-panel");
 const offlinePopup = document.querySelector("#offline-popup");
-const offlineMessage = document.querySelector("#offline-message");
+const offlineEarned = document.querySelector("#offline-earned");
+const offlineTime = document.querySelector("#offline-time");
 const offlineClaimButton = document.querySelector("#offline-claim");
 const prestigeLabel = document.querySelector("#prestige-label");
 const openPrestigeButton = document.querySelector("#open-prestige");
@@ -304,8 +305,17 @@ const updateSoundLabel = () => {
 };
 
 
-const showOfflinePopup = (earned) => {
-  offlineMessage.textContent = `While you were away you earned ${formatNumber(earned)} points`;
+const showOfflinePopup = (earned, offlineSeconds) => {
+  offlineEarned.textContent = `${formatNumber(earned)} points`;
+  if (offlineSeconds > 0) {
+    const hours = Math.floor(offlineSeconds / 3600);
+    const minutes = Math.floor((offlineSeconds % 3600) / 60);
+    offlineTime.textContent = `Away for ${hours}h ${minutes}m`;
+  } else {
+    offlineTime.textContent = "";
+  }
+
+  offlinePopup.classList.remove("closing");
   offlinePopup.classList.add("show");
 };
 
@@ -328,7 +338,7 @@ const checkOfflineEarnings = () => {
   if (offlineEarned > 0) {
     const finalOfflineEarned = addScore(offlineEarned);
     spawnParticles(24);
-    showOfflinePopup(finalOfflineEarned);
+    showOfflinePopup(finalOfflineEarned, effectiveSeconds);
   }
 };
 
@@ -667,7 +677,11 @@ prestigeConfirmButton.addEventListener("click", () => {
 });
 
 offlineClaimButton.addEventListener("click", () => {
-  offlinePopup.classList.remove("show");
+  offlinePopup.classList.add("closing");
+  setTimeout(() => {
+    offlinePopup.classList.remove("show");
+    offlinePopup.classList.remove("closing");
+  }, 220);
 });
 
 window.addEventListener("beforeunload", () => {

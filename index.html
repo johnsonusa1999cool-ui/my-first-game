@@ -148,10 +148,12 @@
     <div id="achievement-toast" class="toast" aria-live="polite"></div>
 
     <div id="offline-popup" class="offline-popup" aria-live="polite">
-      <div class="offline-popup-content">
+      <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Offline rewards">
         <p class="offline-title">Welcome back!</p>
-        <p id="offline-message">While you were away you earned 0 points</p>
-        <button id="offline-claim" class="ghost-button" type="button">Claim</button>
+        <p class="offline-subtitle">While you were away, you earned</p>
+        <p id="offline-earned" class="offline-earned">0</p>
+        <p id="offline-time" class="offline-time"></p>
+        <button id="offline-claim" class="ghost-button" type="button">CLAIM REWARD</button>
       </div>
     </div>
 
