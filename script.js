@@ -71,6 +71,7 @@ const state = {
 };
 
 let displayedScore = 0;
+let offlineCountFrame;
 
 const formatNumber = (value) => {
   const absValue = Math.abs(value);
@@ -305,8 +306,36 @@ const updateSoundLabel = () => {
 };
 
 
+const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+
+const animateOfflineRewardValue = (target) => {
+  if (offlineCountFrame) {
+    cancelAnimationFrame(offlineCountFrame);
+  }
+
+  const duration = 900;
+  const start = performance.now();
+
+  const tick = (now) => {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = easeOutCubic(progress);
+    const currentValue = Math.floor(target * eased);
+    offlineEarned.textContent = `${formatNumber(currentValue)} points`;
+
+    if (progress < 1) {
+      offlineCountFrame = requestAnimationFrame(tick);
+      return;
+    }
+
+    offlineEarned.textContent = `${formatNumber(target)} points`;
+  };
+
+  offlineCountFrame = requestAnimationFrame(tick);
+};
+
+
 const showOfflinePopup = (earned, offlineSeconds) => {
-  offlineEarned.textContent = `${formatNumber(earned)} points`;
+  animateOfflineRewardValue(earned);
   if (offlineSeconds > 0) {
     const hours = Math.floor(offlineSeconds / 3600);
     const minutes = Math.floor((offlineSeconds % 3600) / 60);
@@ -677,6 +706,9 @@ prestigeConfirmButton.addEventListener("click", () => {
 });
 
 offlineClaimButton.addEventListener("click", () => {
+  if (offlineCountFrame) {
+    cancelAnimationFrame(offlineCountFrame);
+  }
   offlinePopup.classList.add("closing");
   setTimeout(() => {
     offlinePopup.classList.remove("show");
