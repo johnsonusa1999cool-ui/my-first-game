@@ -39,16 +39,16 @@
         <div class="game-layout">
           <div class="left-panel">
             <section class="play-area" id="play-area">
-            <div class="playback">
-              <button id="click-button" class="click-button" aria-label="Tap to gain points">
-                <span class="pulse"></span>
-                <span>Click Me</span>
-              </button>
-              <canvas id="particle-canvas" class="particle-canvas"></canvas>
-              <div class="floating-points" id="floating-points"></div>
-            </div>
-            <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
-          </section>
+              <div class="playback">
+                <button id="click-button" class="click-button" aria-label="Tap to gain points">
+                  <span class="pulse"></span>
+                  <span>Click Me</span>
+                </button>
+                <canvas id="particle-canvas" class="particle-canvas"></canvas>
+                <div class="floating-points" id="floating-points"></div>
+              </div>
+              <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
+            </section>
           </div>
 
           <div class="center-panel">
@@ -60,98 +60,102 @@
 
           <div class="shop-panel" id="shop-panel">
             <section class="shop" aria-label="Upgrades shop">
-            <div class="shop-header">
-              <div>
-                <h2>Upgrade Shop</h2>
-                <p>Boost your clicks and automate your score.</p>
+              <div class="shop-header">
+                <div>
+                  <h2>Upgrade Shop</h2>
+                  <p>Boost your clicks and automate your score.</p>
+                </div>
+                <div class="wallet">
+                  <span class="wallet-label">Coins</span>
+                  <span id="wallet" class="wallet-value">0</span>
+                </div>
               </div>
-              <div class="wallet">
-                <span class="wallet-label">Coins</span>
-                <span id="wallet" class="wallet-value">0</span>
+              <div class="upgrade-grid">
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Power Finger</h3>
+                      <p>Increase points per click.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-click-owned">Owned: 0</span>
+                      <span class="upgrade-tier">Tier 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-click" class="upgrade-button" type="button">
+                    Buy <span id="upgrade-click-cost">10</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Auto Clicker</h3>
+                      <p>Earn points every second.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-auto-owned">Owned: 0</span>
+                      <span class="upgrade-tier">Tier 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-auto" class="upgrade-button" type="button">
+                    Buy <span id="upgrade-auto-cost">25</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Critical Spark</h3>
+                      <p>Chance to double click power.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-crit-owned">Owned: 0</span>
+                      <span class="upgrade-tier">Tier 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-crit" class="upgrade-button" type="button">
+                    Buy <span id="upgrade-crit-cost">40</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Speed Core</h3>
+                      <p>Faster click burst animation.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-speed-owned">Owned: 0</span>
+                      <span class="upgrade-tier">Tier 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-speed" class="upgrade-button" type="button">
+                    Buy <span id="upgrade-speed-cost">30</span>
+                  </button>
+                </article>
               </div>
-            </div>
-            <div class="upgrade-grid">
-              <article class="upgrade-card">
-                <div class="upgrade-info">
-                  <div>
-                    <h3>Power Finger</h3>
-                    <p>Increase points per click.</p>
-                  </div>
-                  <div class="upgrade-meta">
-                    <span id="upgrade-click-owned">Owned: 0</span>
-                    <span class="upgrade-tier">Tier 1</span>
-                  </div>
-                </div>
-                <button id="upgrade-click" class="upgrade-button" type="button">
-                  Buy <span id="upgrade-click-cost">10</span>
-                </button>
-              </article>
-              <article class="upgrade-card">
-                <div class="upgrade-info">
-                  <div>
-                    <h3>Auto Clicker</h3>
-                    <p>Earn points every second.</p>
-                  </div>
-                  <div class="upgrade-meta">
-                    <span id="upgrade-auto-owned">Owned: 0</span>
-                    <span class="upgrade-tier">Tier 1</span>
-                  </div>
-                </div>
-                <button id="upgrade-auto" class="upgrade-button" type="button">
-                  Buy <span id="upgrade-auto-cost">25</span>
-                </button>
-              </article>
-              <article class="upgrade-card">
-                <div class="upgrade-info">
-                  <div>
-                    <h3>Critical Spark</h3>
-                    <p>Chance to double click power.</p>
-                  </div>
-                  <div class="upgrade-meta">
-                    <span id="upgrade-crit-owned">Owned: 0</span>
-                    <span class="upgrade-tier">Tier 1</span>
-                  </div>
-                </div>
-                <button id="upgrade-crit" class="upgrade-button" type="button">
-                  Buy <span id="upgrade-crit-cost">40</span>
-                </button>
-              </article>
-              <article class="upgrade-card">
-                <div class="upgrade-info">
-                  <div>
-                    <h3>Speed Core</h3>
-                    <p>Faster click burst animation.</p>
-                  </div>
-                  <div class="upgrade-meta">
-                    <span id="upgrade-speed-owned">Owned: 0</span>
-                    <span class="upgrade-tier">Tier 1</span>
-                  </div>
-                </div>
-                <button id="upgrade-speed" class="upgrade-button" type="button">
-                  Buy <span id="upgrade-speed-cost">30</span>
-                </button>
-              </article>
-            </div>
-          </section>
-                </div>
+            </section>
+          </div>
         </div>
       </main>
     </div>
 
     <div id="achievement-toast" class="toast" aria-live="polite"></div>
+
     <div id="offline-popup" class="offline-popup" aria-live="polite">
-      <p class="offline-title">Welcome back!</p>
-      <p id="offline-message">While you were away you earned 0 points</p>
-      <button id="offline-claim" class="ghost-button" type="button">Claim</button>
+      <div class="offline-popup-content">
+        <p class="offline-title">Welcome back!</p>
+        <p id="offline-message">While you were away you earned 0 points</p>
+        <button id="offline-claim" class="ghost-button" type="button">Claim</button>
+      </div>
     </div>
 
-
     <div id="prestige-popup" class="offline-popup" aria-live="polite">
-      <p class="offline-title">Ascend?</p>
-      <p id="prestige-message">Reset progress for prestige points.</p>
-      <div class="prestige-actions">
-        <button id="prestige-cancel" class="ghost-button" type="button">Cancel</button>
-        <button id="prestige-confirm" class="ghost-button" type="button">Confirm</button>
+      <div class="offline-popup-content">
+        <p class="offline-title">Ascend?</p>
+        <p id="prestige-message">Reset progress for prestige points.</p>
+        <div class="prestige-actions">
+          <button id="prestige-cancel" class="ghost-button" type="button">Cancel</button>
+          <button id="prestige-confirm" class="ghost-button" type="button">Confirm</button>
+        </div>
       </div>
     </div>
 
