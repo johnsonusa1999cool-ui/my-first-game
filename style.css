@@ -530,10 +530,13 @@ body {
   z-index: 20;
   opacity: 0;
   pointer-events: none;
+  isolation: isolate;
   transition: opacity 0.25s ease;
 }
 
 .offline-popup > * {
+  position: relative;
+  z-index: 1;
   pointer-events: auto;
 }
 
@@ -569,6 +572,10 @@ body {
   border-top: none;
   padding: 12px 20px;
   width: 100%;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .offline-popup.show {
