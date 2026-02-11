@@ -35,6 +35,10 @@ const prestigePopup = document.querySelector("#prestige-popup");
 const prestigeMessage = document.querySelector("#prestige-message");
 const prestigeCancelButton = document.querySelector("#prestige-cancel");
 const prestigeConfirmButton = document.querySelector("#prestige-confirm");
+const prestigeLevelEl = document.querySelector("#prestige-level");
+const prestigeRequirementEl = document.querySelector("#prestige-requirement");
+const prestigeCurrentEl = document.querySelector("#prestige-current");
+const prestigeRewardEl = document.querySelector("#prestige-reward");
 
 const SAVE_KEY = "neon-clicker-save";
 const LAST_PLAYED_KEY = "neon-clicker-last-played";
@@ -108,8 +112,19 @@ const addScore = (baseAmount) => {
 
 const getPrestigeGain = () => Math.floor(Math.sqrt(state.totalEarnedThisRun / 50000));
 
+const getNextPrestigeRequirement = () => {
+  const nextTier = getPrestigeGain() + 1;
+  return 50000 * nextTier * nextTier;
+};
+
 const updatePrestigeLabel = () => {
+  const gain = getPrestigeGain();
   prestigeLabel.textContent = `Prestige: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
+  prestigeLevelEl.textContent = `Prestige Level: ${formatNumber(state.prestigePoints)}`;
+  prestigeRequirementEl.textContent = `Requirement: ${formatNumber(getNextPrestigeRequirement())} points`;
+  prestigeCurrentEl.textContent = `Current: ${formatNumber(state.totalEarnedThisRun)}`;
+  prestigeRewardEl.textContent = `Reward: +${(gain * 0.1).toFixed(1)} multiplier`;
+  openPrestigeButton.disabled = gain <= 0;
 };
 
 const resetProgressForPrestige = () => {
@@ -630,7 +645,7 @@ openPrestigeButton.addEventListener("click", () => {
     showToast("Earn more score to unlock prestige");
     return;
   }
-  prestigeMessage.textContent = `Reset progress and gain +${gain} prestige points?`;
+  prestigeMessage.textContent = `Are you sure? This will reset your progress. You will gain +${gain} prestige points.`;
   prestigePopup.classList.add("show");
 });
 

@@ -30,7 +30,14 @@
             <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
             <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
             <button id="toggle-shop" class="ghost-button" type="button">Shop</button>
-            <button id="open-prestige" class="ghost-button" type="button">Prestige</button>
+          </div>
+
+          <div class="prestige-panel">
+            <p id="prestige-level" class="prestige-stat">Prestige Level: 0</p>
+            <p id="prestige-requirement" class="prestige-stat">Requirement: 50K points</p>
+            <p id="prestige-current" class="prestige-stat">Current: 0</p>
+            <p id="prestige-reward" class="prestige-stat">Reward: +0.0 multiplier</p>
+            <button id="open-prestige" class="ghost-button" type="button">PRESTIGE BUTTON</button>
           </div>
         </div>
       </header>
@@ -151,10 +158,10 @@
     <div id="prestige-popup" class="offline-popup" aria-live="polite">
       <div class="offline-popup-content">
         <p class="offline-title">Ascend?</p>
-        <p id="prestige-message">Reset progress for prestige points.</p>
+        <p id="prestige-message">Are you sure? This will reset your progress.</p>
         <div class="prestige-actions">
-          <button id="prestige-cancel" class="ghost-button" type="button">Cancel</button>
-          <button id="prestige-confirm" class="ghost-button" type="button">Confirm</button>
+          <button id="prestige-cancel" class="ghost-button" type="button">CANCEL</button>
+          <button id="prestige-confirm" class="ghost-button" type="button">CONFIRM</button>
         </div>
       </div>
     </div>

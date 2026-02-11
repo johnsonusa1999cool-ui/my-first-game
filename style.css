@@ -123,6 +123,25 @@ body {
   flex-wrap: wrap;
 }
 
+
+.prestige-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(124, 92, 255, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.prestige-stat {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+#open-prestige {
+  margin-top: 6px;
+}
+
 .ghost-button {
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: transparent;
