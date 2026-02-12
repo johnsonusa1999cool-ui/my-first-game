@@ -689,11 +689,45 @@ body {
   padding: 12px 16px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 6px;
+  transition: transform 0.25s ease, border 0.25s ease, background 0.25s ease;
+}
+
+.achievement-main-row,
+.achievement-reward-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  transition: transform 0.25s ease, border 0.25s ease, background 0.25s ease;
+  gap: 10px;
+}
+
+.achievement-main-row {
+  font-weight: 600;
+}
+
+.achievement-reward-text {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.achievement-claim-state {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.achievement-claim-state.claimed {
+  border-color: rgba(68, 229, 178, 0.6);
+  color: var(--success);
+}
+
+.achievement-claim-state.unclaimed {
+  border-color: rgba(255, 196, 107, 0.6);
+  color: #ffc46b;
 }
 
 .achievement-item.unlocked {
@@ -921,6 +955,29 @@ body {
 
 #prestige-popup .offline-popup-content {
   text-align: center;
+}
+#achievement-reward-popup .offline-popup-content {
+  text-align: center;
+  border: 1px solid rgba(68, 229, 178, 0.38);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 26px rgba(68, 229, 178, 0.26);
+}
+
+#achievement-reward-popup #achievement-reward-label {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+#achievement-reward-popup #achievement-reward-text {
+  color: #c6fff2;
+  text-shadow: 0 0 12px rgba(68, 229, 178, 0.45);
+}
+
+#achievement-reward-popup #achievement-reward-close {
+  margin-top: 10px;
+  width: 100%;
+  background: rgba(68, 229, 178, 0.18);
+  border-color: rgba(68, 229, 178, 0.45);
 }
 
 @keyframes offline-modal-in {

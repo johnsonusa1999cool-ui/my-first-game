@@ -27,6 +27,10 @@ const particleCanvas = document.querySelector("#particle-canvas");
 const comboLabel = document.querySelector("#combo-label");
 const comboFill = document.querySelector("#combo-fill");
 const achievementToast = document.querySelector("#achievement-toast");
+const achievementRewardPopup = document.querySelector("#achievement-reward-popup");
+const achievementRewardLabel = document.querySelector("#achievement-reward-label");
+const achievementRewardText = document.querySelector("#achievement-reward-text");
+const achievementRewardClose = document.querySelector("#achievement-reward-close");
 const playArea = document.querySelector("#play-area");
 const shopPanel = document.querySelector("#shop-panel");
 const offlinePopup = document.querySelector("#offline-popup");
@@ -84,6 +88,7 @@ const state = {
   energy: 0,
   overloadUntil: 0,
   locale: "en",
+  achievementBoostUntil: 0,
 };
 
 let displayedScore = 0;
@@ -186,6 +191,47 @@ const resolveInitialLocale = () => {
     return;
   }
   state.locale = navigator.language && navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+};
+
+const getAchievementBoostMultiplier = () => (Date.now() < state.achievementBoostUntil ? 1.5 : 1);
+
+const getAchievementRewardDescription = (achievement) => {
+  if (achievement.reward.type === "coins") {
+    return `+${formatNumber(achievement.reward.amount)} bonus coins`;
+  }
+  if (achievement.reward.type === "temp_multiplier") {
+    return `x${achievement.reward.multiplier.toFixed(1)} score for ${Math.round(achievement.reward.durationMs / 1000)}s`;
+  }
+  return `+${formatNumber(achievement.reward.amount)} permanent click power`;
+};
+
+const showAchievementRewardPopup = (achievement) => {
+  achievementRewardLabel.textContent = achievement.label;
+  achievementRewardText.textContent = getAchievementRewardDescription(achievement);
+  achievementRewardPopup.classList.remove("closing");
+  achievementRewardPopup.classList.add("show");
+};
+
+const applyAchievementReward = (achievement) => {
+  if (achievement.rewardClaimed) {
+    return;
+  }
+
+  if (achievement.reward.type === "coins") {
+    state.score += achievement.reward.amount;
+  }
+
+  if (achievement.reward.type === "temp_multiplier") {
+    state.achievementBoostUntil = Math.max(state.achievementBoostUntil, Date.now() + achievement.reward.durationMs);
+  }
+
+  if (achievement.reward.type === "permanent_click") {
+    state.pointsPerClick += achievement.reward.amount;
+  }
+
+  achievement.rewardClaimed = true;
+  showAchievementRewardPopup(achievement);
+  logAnalyticsEvent("achievement_reward_claimed", { id: achievement.id, reward: achievement.reward.type });
 };
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
@@ -330,7 +376,7 @@ const updateAnimatedScore = () => {
 const getPrestigeMultiplier = () => 1 + state.prestigePoints * 0.1;
 
 const addScore = (baseAmount) => {
-  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier() * getOverloadMultiplier());
+  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier() * getOverloadMultiplier() * getAchievementBoostMultiplier());
   state.score += boostedAmount;
   state.totalEarnedThisRun += boostedAmount;
   return boostedAmount;
@@ -371,9 +417,11 @@ const resetProgressForPrestige = () => {
   state.totalClicks = 0;
   state.combo = 1;
   state.totalEarnedThisRun = 0;
+  state.achievementBoostUntil = 0;
 
   achievements.forEach((achievement) => {
     achievement.unlocked = false;
+    achievement.rewardClaimed = false;
   });
 
   renderAchievements();
@@ -383,15 +431,15 @@ const resetProgressForPrestige = () => {
 
 // Achievement definitions
 const achievements = [
-  { id: "first-click", label: "First tap!", type: "clicks", target: 1, unlocked: false },
-  { id: "click-fiend", label: "50 clicks", type: "clicks", target: 50, unlocked: false },
-  { id: "tap-machine", label: "500 clicks", type: "clicks", target: 500, unlocked: false },
-  { id: "hundred", label: "100 points", type: "score", target: 100, unlocked: false },
-  { id: "five-k", label: "5K points", type: "score", target: 5000, unlocked: false },
-  { id: "fifty-k", label: "50K points", type: "score", target: 50000, unlocked: false },
-  { id: "upgrade-hunter", label: "Buy 5 upgrades", type: "upgrades", target: 5, unlocked: false },
-  { id: "upgrade-master", label: "Buy 20 upgrades", type: "upgrades", target: 20, unlocked: false },
-  { id: "first-auto", label: "Automation online", type: "auto", target: 1, unlocked: false },
+  { id: "first-click", label: "First tap!", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
+  { id: "click-fiend", label: "50 clicks", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
+  { id: "tap-machine", label: "500 clicks", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "hundred", label: "100 points", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
+  { id: "five-k", label: "5K points", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
+  { id: "fifty-k", label: "50K points", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
+  { id: "upgrade-hunter", label: "Buy 5 upgrades", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
+  { id: "upgrade-master", label: "Buy 20 upgrades", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "first-auto", label: "Automation online", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
 ];
 
 let audioContext;
@@ -512,9 +560,16 @@ const renderAchievements = () => {
       item.classList.add("unlocked");
     }
     const progress = getAchievementProgress(achievement);
+    const progressLabel = achievement.unlocked ? "Unlocked" : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`;
     item.innerHTML = `
-      <span>${achievement.label}</span>
-      <span>${achievement.unlocked ? "Unlocked" : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`}</span>
+      <div class="achievement-main-row">
+        <span>${achievement.label}</span>
+        <span>${progressLabel}</span>
+      </div>
+      <div class="achievement-reward-row">
+        <span class="achievement-reward-text">Reward: ${getAchievementRewardDescription(achievement)}</span>
+        <span class="achievement-claim-state ${achievement.rewardClaimed ? "claimed" : "unclaimed"}">${achievement.rewardClaimed ? "Claimed" : "Unclaimed"}</span>
+      </div>
     `;
     achievementList.appendChild(item);
   });
@@ -707,6 +762,7 @@ const checkAchievements = () => {
       achievement.unlocked = true;
       playTone(720, 0.2, "triangle");
       showToast(`Achievement unlocked: ${achievement.label}`);
+      applyAchievementReward(achievement);
     }
   });
 
@@ -742,6 +798,7 @@ const saveGame = () => {
     energy: state.energy,
     overloadUntil: state.overloadUntil,
     locale: state.locale,
+    achievementBoostUntil: state.achievementBoostUntil,
   };
 
   if (saveTimeout) {
@@ -788,12 +845,14 @@ const loadGame = () => {
     if (payload.locale === "ru" || payload.locale === "en") {
       state.locale = payload.locale;
     }
+    state.achievementBoostUntil = safeNumber(payload.achievementBoostUntil, state.achievementBoostUntil, 0);
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
         const match = achievements.find((item) => item.id === savedAchievement.id);
         if (match) {
           match.unlocked = savedAchievement.unlocked;
+          match.rewardClaimed = savedAchievement.rewardClaimed ?? (savedAchievement.unlocked ? true : false);
         }
       });
     }
@@ -972,6 +1031,14 @@ prestigeConfirmButton.addEventListener("click", () => {
   resetProgressForPrestige();
 });
 
+achievementRewardClose.addEventListener("click", () => {
+  achievementRewardPopup.classList.add("closing");
+  setTimeout(() => {
+    achievementRewardPopup.classList.remove("show");
+    achievementRewardPopup.classList.remove("closing");
+  }, 180);
+});
+
 offlineClaimButton.addEventListener("click", () => {
   if (offlineCountFrame) {
     cancelAnimationFrame(offlineCountFrame);
@@ -1008,6 +1075,11 @@ setInterval(() => {
 
   if (state.overloadUntil && Date.now() > state.overloadUntil) {
     state.overloadUntil = 0;
+    updateUI();
+  }
+
+  if (state.achievementBoostUntil && Date.now() > state.achievementBoostUntil) {
+    state.achievementBoostUntil = 0;
     updateUI();
   }
 
