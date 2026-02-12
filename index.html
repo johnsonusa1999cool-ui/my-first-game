@@ -48,8 +48,14 @@
             <section class="play-area" id="play-area">
               <div class="playback">
                 <button id="click-button" class="click-button" aria-label="Tap to gain points">
-                  <span class="pulse"></span>
-                  <span>Click Me</span>
+                  <span class="cube-glow" aria-hidden="true"></span>
+                  <span class="cube" aria-hidden="true">
+                    <span class="cube-face cube-front"></span>
+                    <span class="cube-face cube-top"></span>
+                    <span class="cube-face cube-side"></span>
+                    <span class="cube-core"></span>
+                  </span>
+                  <span class="cube-text">ENERGY CORE</span>
                 </button>
                 <canvas id="particle-canvas" class="particle-canvas"></canvas>
                 <div class="floating-points" id="floating-points"></div>
