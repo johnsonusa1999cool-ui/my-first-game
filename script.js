@@ -1,0 +1,758 @@
+const scoreEl = document.querySelector("#score");
+const perClickEl = document.querySelector("#per-click");
+const perSecondEl = document.querySelector("#per-second");
+const clickButton = document.querySelector("#click-button");
+const floatingPoints = document.querySelector("#floating-points");
+const upgradeClickButton = document.querySelector("#upgrade-click");
+const upgradeAutoButton = document.querySelector("#upgrade-auto");
+const upgradeClickCostEl = document.querySelector("#upgrade-click-cost");
+const upgradeAutoCostEl = document.querySelector("#upgrade-auto-cost");
+const upgradeClickOwnedEl = document.querySelector("#upgrade-click-owned");
+const upgradeAutoOwnedEl = document.querySelector("#upgrade-auto-owned");
+const upgradeCritButton = document.querySelector("#upgrade-crit");
+const upgradeSpeedButton = document.querySelector("#upgrade-speed");
+const upgradeCritCostEl = document.querySelector("#upgrade-crit-cost");
+const upgradeSpeedCostEl = document.querySelector("#upgrade-speed-cost");
+const upgradeCritOwnedEl = document.querySelector("#upgrade-crit-owned");
+const upgradeSpeedOwnedEl = document.querySelector("#upgrade-speed-owned");
+const achievementList = document.querySelector("#achievement-list");
+const toggleSoundButton = document.querySelector("#toggle-sound");
+const resetSaveButton = document.querySelector("#reset-save");
+const toggleShopButton = document.querySelector("#toggle-shop");
+const walletEl = document.querySelector("#wallet");
+const particleCanvas = document.querySelector("#particle-canvas");
+const comboLabel = document.querySelector("#combo-label");
+const comboFill = document.querySelector("#combo-fill");
+const achievementToast = document.querySelector("#achievement-toast");
+const playArea = document.querySelector("#play-area");
+const shopPanel = document.querySelector("#shop-panel");
+const offlinePopup = document.querySelector("#offline-popup");
+const offlineEarned = document.querySelector("#offline-earned");
+const offlineTime = document.querySelector("#offline-time");
+const offlineClaimButton = document.querySelector("#offline-claim");
+const prestigeLabel = document.querySelector("#prestige-label");
+const openPrestigeButton = document.querySelector("#open-prestige");
+const prestigePopup = document.querySelector("#prestige-popup");
+const prestigeMessage = document.querySelector("#prestige-message");
+const prestigeCancelButton = document.querySelector("#prestige-cancel");
+const prestigeConfirmButton = document.querySelector("#prestige-confirm");
+const prestigeLevelEl = document.querySelector("#prestige-level");
+const prestigeRequirementEl = document.querySelector("#prestige-requirement");
+const prestigeCurrentEl = document.querySelector("#prestige-current");
+const prestigeRewardEl = document.querySelector("#prestige-reward");
+
+const SAVE_KEY = "neon-clicker-save";
+const LAST_PLAYED_KEY = "neon-clicker-last-played";
+const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
+
+// Core game state
+const state = {
+  score: 0,
+  pointsPerClick: 1,
+  autoClickers: 0,
+  clickUpgradeCost: 10,
+  autoUpgradeCost: 25,
+  clickUpgradeOwned: 0,
+  autoUpgradeOwned: 0,
+  critChance: 0,
+  critUpgradeCost: 40,
+  critUpgradeOwned: 0,
+  speedUpgradeCost: 30,
+  speedUpgradeOwned: 0,
+  clickBurstDuration: 0.4,
+  soundEnabled: true,
+  totalClicks: 0,
+  combo: 1,
+  lastClickAt: 0,
+  volume: 0.15,
+  shopOpen: true,
+  prestigePoints: 0,
+  totalEarnedThisRun: 0,
+};
+
+let displayedScore = 0;
+let offlineCountFrame;
+
+const formatNumber = (value) => {
+  const absValue = Math.abs(value);
+  if (absValue < 1000) {
+    return Math.floor(value).toString();
+  }
+
+  const suffixes = [
+    { limit: 1e12, suffix: "T" },
+    { limit: 1e9, suffix: "B" },
+    { limit: 1e6, suffix: "M" },
+    { limit: 1e3, suffix: "K" },
+  ];
+
+  const matched = suffixes.find((entry) => absValue >= entry.limit);
+  const shortValue = value / matched.limit;
+  const precision = shortValue >= 100 ? 0 : shortValue >= 10 ? 1 : 2;
+  return `${shortValue.toFixed(precision)}${matched.suffix}`;
+};
+
+const updateAnimatedScore = () => {
+  displayedScore += (state.score - displayedScore) * 0.16;
+  if (Math.abs(state.score - displayedScore) < 0.05) {
+    displayedScore = state.score;
+  }
+
+  scoreEl.textContent = formatNumber(displayedScore);
+  walletEl.textContent = formatNumber(displayedScore);
+};
+
+
+const getPrestigeMultiplier = () => 1 + state.prestigePoints * 0.1;
+
+const addScore = (baseAmount) => {
+  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier());
+  state.score += boostedAmount;
+  state.totalEarnedThisRun += boostedAmount;
+  return boostedAmount;
+};
+
+const getPrestigeGain = () => Math.floor(Math.sqrt(state.totalEarnedThisRun / 50000));
+
+const getNextPrestigeRequirement = () => {
+  const nextTier = getPrestigeGain() + 1;
+  return 50000 * nextTier * nextTier;
+};
+
+const updatePrestigeLabel = () => {
+  const gain = getPrestigeGain();
+  prestigeLabel.textContent = `Prestige: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
+  prestigeLevelEl.textContent = `Prestige Level: ${formatNumber(state.prestigePoints)}`;
+  prestigeRequirementEl.textContent = `Requirement: ${formatNumber(getNextPrestigeRequirement())} points`;
+  prestigeCurrentEl.textContent = `Current: ${formatNumber(state.totalEarnedThisRun)}`;
+  prestigeRewardEl.textContent = `Reward: +${(gain * 0.1).toFixed(1)} multiplier`;
+  openPrestigeButton.disabled = gain <= 0;
+  openPrestigeButton.textContent = gain > 0 ? `Prestige +${gain}` : "Need more points";
+};
+
+const resetProgressForPrestige = () => {
+  state.score = 0;
+  state.pointsPerClick = 1;
+  state.autoClickers = 0;
+  state.clickUpgradeCost = 10;
+  state.autoUpgradeCost = 25;
+  state.clickUpgradeOwned = 0;
+  state.autoUpgradeOwned = 0;
+  state.critChance = 0;
+  state.critUpgradeCost = 40;
+  state.critUpgradeOwned = 0;
+  state.speedUpgradeCost = 30;
+  state.speedUpgradeOwned = 0;
+  state.clickBurstDuration = 0.4;
+  state.totalClicks = 0;
+  state.combo = 1;
+  state.totalEarnedThisRun = 0;
+
+  achievements.forEach((achievement) => {
+    achievement.unlocked = false;
+  });
+
+  renderAchievements();
+  updateUI();
+  saveGame();
+};
+
+// Achievement definitions
+const achievements = [
+  { id: "first-click", label: "First tap!", type: "clicks", target: 1, unlocked: false },
+  { id: "click-fiend", label: "50 clicks", type: "clicks", target: 50, unlocked: false },
+  { id: "tap-machine", label: "500 clicks", type: "clicks", target: 500, unlocked: false },
+  { id: "hundred", label: "100 points", type: "score", target: 100, unlocked: false },
+  { id: "five-k", label: "5K points", type: "score", target: 5000, unlocked: false },
+  { id: "fifty-k", label: "50K points", type: "score", target: 50000, unlocked: false },
+  { id: "upgrade-hunter", label: "Buy 5 upgrades", type: "upgrades", target: 5, unlocked: false },
+  { id: "upgrade-master", label: "Buy 20 upgrades", type: "upgrades", target: 20, unlocked: false },
+  { id: "first-auto", label: "Automation online", type: "auto", target: 1, unlocked: false },
+];
+
+let audioContext;
+
+const getAudioContext = () => {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+  return audioContext;
+};
+
+// Create soft synth-style tones for effects
+const playTone = (frequency, duration, type = "sine") => {
+  if (!state.soundEnabled) {
+    return;
+  }
+
+  const context = getAudioContext();
+  if (context.state === "suspended") {
+    context.resume();
+  }
+
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  gain.gain.value = state.volume;
+  gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + duration);
+};
+
+const resizeCanvas = () => {
+  const rect = particleCanvas.getBoundingClientRect();
+  particleCanvas.width = rect.width * window.devicePixelRatio;
+  particleCanvas.height = rect.height * window.devicePixelRatio;
+};
+
+const particles = [];
+const ctx = particleCanvas.getContext("2d");
+
+const spawnParticles = (amount) => {
+  const rect = particleCanvas.getBoundingClientRect();
+  for (let i = 0; i < amount; i += 1) {
+    particles.push({
+      x: rect.width / 2,
+      y: rect.height / 2,
+      radius: 3 + Math.random() * 4,
+      alpha: 1,
+      velocityX: (Math.random() - 0.5) * 3,
+      velocityY: -2 - Math.random() * 2,
+      hue: 150 + Math.random() * 120,
+    });
+  }
+};
+
+const animateParticles = () => {
+  ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  ctx.save();
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  particles.forEach((particle) => {
+    particle.x += particle.velocityX;
+    particle.y += particle.velocityY;
+    particle.alpha -= 0.02;
+    ctx.fillStyle = `hsla(${particle.hue}, 80%, 70%, ${particle.alpha})`;
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  for (let i = particles.length - 1; i >= 0; i -= 1) {
+    if (particles[i].alpha <= 0) {
+      particles.splice(i, 1);
+    }
+  }
+
+  ctx.restore();
+  updateAnimatedScore();
+  requestAnimationFrame(animateParticles);
+};
+
+
+
+const getTotalUpgradesBought = () =>
+  state.clickUpgradeOwned +
+  state.autoUpgradeOwned +
+  state.critUpgradeOwned +
+  state.speedUpgradeOwned;
+
+const getAchievementProgress = (achievement) => {
+  if (achievement.type === "clicks") {
+    return { current: state.totalClicks, target: achievement.target };
+  }
+  if (achievement.type === "score") {
+    return { current: state.score, target: achievement.target };
+  }
+  if (achievement.type === "upgrades") {
+    return { current: getTotalUpgradesBought(), target: achievement.target };
+  }
+  if (achievement.type === "auto") {
+    return { current: state.autoClickers, target: achievement.target };
+  }
+  return { current: 0, target: achievement.target };
+};
+
+// Render achievements list
+const renderAchievements = () => {
+  achievementList.innerHTML = "";
+  achievements.forEach((achievement) => {
+    const item = document.createElement("li");
+    item.className = "achievement-item";
+    if (achievement.unlocked) {
+      item.classList.add("unlocked");
+    }
+    const progress = getAchievementProgress(achievement);
+    item.innerHTML = `
+      <span>${achievement.label}</span>
+      <span>${achievement.unlocked ? "Unlocked" : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`}</span>
+    `;
+    achievementList.appendChild(item);
+  });
+};
+
+const showToast = (message) => {
+  achievementToast.textContent = message;
+  achievementToast.classList.add("show");
+  setTimeout(() => {
+    achievementToast.classList.remove("show");
+  }, 2000);
+};
+
+const updateSoundLabel = () => {
+  toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
+};
+
+
+const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+
+const animateOfflineRewardValue = (target) => {
+  if (offlineCountFrame) {
+    cancelAnimationFrame(offlineCountFrame);
+  }
+
+  const duration = 900;
+  const start = performance.now();
+
+  const tick = (now) => {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = easeOutCubic(progress);
+    const currentValue = Math.floor(target * eased);
+    offlineEarned.textContent = `${formatNumber(currentValue)} points`;
+
+    if (progress < 1) {
+      offlineCountFrame = requestAnimationFrame(tick);
+      return;
+    }
+
+    offlineEarned.textContent = `${formatNumber(target)} points`;
+  };
+
+  offlineCountFrame = requestAnimationFrame(tick);
+};
+
+
+const showOfflinePopup = (earned, offlineSeconds) => {
+  animateOfflineRewardValue(earned);
+  if (offlineSeconds > 0) {
+    const hours = Math.floor(offlineSeconds / 3600);
+    const minutes = Math.floor((offlineSeconds % 3600) / 60);
+    offlineTime.textContent = `Away for ${hours}h ${minutes}m`;
+  } else {
+    offlineTime.textContent = "";
+  }
+
+  offlinePopup.classList.remove("closing");
+  offlinePopup.classList.add("show");
+};
+
+const checkOfflineEarnings = () => {
+  const lastPlayedRaw = localStorage.getItem(LAST_PLAYED_KEY);
+  if (!lastPlayedRaw) {
+    return;
+  }
+
+  const lastPlayed = Number(lastPlayedRaw);
+  if (Number.isNaN(lastPlayed)) {
+    return;
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - lastPlayed) / 1000));
+  const effectiveSeconds = Math.min(elapsedSeconds, MAX_OFFLINE_SECONDS);
+  const passivePerSecond = state.autoClickers * state.pointsPerClick;
+  const offlineEarned = Math.floor(effectiveSeconds * passivePerSecond);
+
+  if (offlineEarned > 0) {
+    const finalOfflineEarned = addScore(offlineEarned);
+    spawnParticles(24);
+    showOfflinePopup(finalOfflineEarned, effectiveSeconds);
+  }
+};
+
+const updateShopState = () => {
+  if (state.shopOpen) {
+    shopPanel.classList.remove("is-collapsed");
+  } else {
+    shopPanel.classList.add("is-collapsed");
+  }
+};
+
+const animatePurchase = (button) => {
+  const card = button.closest(".upgrade-card");
+  if (!card) {
+    return;
+  }
+  card.classList.remove("purchased");
+  void card.offsetWidth;
+  card.classList.add("purchased");
+  setTimeout(() => {
+    card.classList.remove("purchased");
+  }, 500);
+};
+
+const triggerScreenShake = () => {
+  playArea.classList.remove("shake");
+  void playArea.offsetWidth;
+  playArea.classList.add("shake");
+  setTimeout(() => {
+    playArea.classList.remove("shake");
+  }, 250);
+};
+
+const triggerCriticalShake = () => {
+  playArea.classList.remove("crit-shake");
+  void playArea.offsetWidth;
+  playArea.classList.add("crit-shake");
+  setTimeout(() => {
+    playArea.classList.remove("crit-shake");
+  }, 180);
+};
+
+const triggerClickBurst = () => {
+  clickButton.classList.remove("burst");
+  void clickButton.offsetWidth;
+  clickButton.classList.add("burst");
+  setTimeout(() => {
+    clickButton.classList.remove("burst");
+  }, 400);
+};
+
+// Update UI when state changes
+const updateUI = () => {
+  perClickEl.textContent = `+${formatNumber(state.pointsPerClick)} per click`;
+  perSecondEl.textContent = `${formatNumber(state.autoClickers * state.pointsPerClick)} / sec`;
+
+  upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
+  upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
+  upgradeClickOwnedEl.textContent = `Owned: ${state.clickUpgradeOwned}`;
+  upgradeAutoOwnedEl.textContent = `Owned: ${state.autoUpgradeOwned}`;
+  upgradeCritCostEl.textContent = formatNumber(state.critUpgradeCost);
+  upgradeSpeedCostEl.textContent = formatNumber(state.speedUpgradeCost);
+  upgradeCritOwnedEl.textContent = `Owned: ${state.critUpgradeOwned}`;
+  upgradeSpeedOwnedEl.textContent = `Owned: ${state.speedUpgradeOwned}`;
+
+  upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
+  upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
+  upgradeCritButton.disabled = state.score < state.critUpgradeCost;
+  upgradeSpeedButton.disabled = state.score < state.speedUpgradeCost;
+  updateSoundLabel();
+  updateShopState();
+
+  comboLabel.textContent = `Combo x${state.combo}`;
+  comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
+  clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
+  updatePrestigeLabel();
+};
+
+// Visual feedback when clicking
+const spawnFloatingPoints = (amount, isCrit = false) => {
+  const point = document.createElement("span");
+  point.className = "floating-point";
+  point.textContent = isCrit ? `+${formatNumber(amount)} CRIT!` : `+${formatNumber(amount)}`;
+  if (isCrit) {
+    point.classList.add("crit");
+  }
+  const offsetX = 40 + Math.random() * 80;
+  const offsetY = 40 + Math.random() * 80;
+  point.style.left = `${offsetX}px`;
+  point.style.top = `${offsetY}px`;
+  floatingPoints.appendChild(point);
+
+  setTimeout(() => {
+    point.remove();
+  }, 1200);
+};
+
+// Apply achievements when conditions are met
+const checkAchievements = () => {
+  achievements.forEach((achievement) => {
+    if (achievement.unlocked) {
+      return;
+    }
+
+    const progress = getAchievementProgress(achievement);
+    if (progress.current >= progress.target) {
+      achievement.unlocked = true;
+      playTone(720, 0.2, "triangle");
+      showToast(`Achievement unlocked: ${achievement.label}`);
+    }
+  });
+
+  renderAchievements();
+};
+
+let saveTimeout;
+
+const saveGame = () => {
+  const payload = {
+    score: state.score,
+    pointsPerClick: state.pointsPerClick,
+    autoClickers: state.autoClickers,
+    clickUpgradeCost: state.clickUpgradeCost,
+    autoUpgradeCost: state.autoUpgradeCost,
+    clickUpgradeOwned: state.clickUpgradeOwned,
+    autoUpgradeOwned: state.autoUpgradeOwned,
+    critChance: state.critChance,
+    critUpgradeCost: state.critUpgradeCost,
+    critUpgradeOwned: state.critUpgradeOwned,
+    speedUpgradeCost: state.speedUpgradeCost,
+    speedUpgradeOwned: state.speedUpgradeOwned,
+    clickBurstDuration: state.clickBurstDuration,
+    achievements,
+    soundEnabled: state.soundEnabled,
+    totalClicks: state.totalClicks,
+    combo: state.combo,
+    lastClickAt: state.lastClickAt,
+    volume: state.volume,
+    shopOpen: state.shopOpen,
+    prestigePoints: state.prestigePoints,
+    totalEarnedThisRun: state.totalEarnedThisRun,
+  };
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
+  }, 150);
+};
+
+const loadGame = () => {
+  const saved = localStorage.getItem(SAVE_KEY);
+  if (!saved) {
+    return;
+  }
+
+  try {
+    const payload = JSON.parse(saved);
+    state.score = payload.score ?? state.score;
+    state.pointsPerClick = payload.pointsPerClick ?? state.pointsPerClick;
+    state.autoClickers = payload.autoClickers ?? state.autoClickers;
+    state.clickUpgradeCost = payload.clickUpgradeCost ?? state.clickUpgradeCost;
+    state.autoUpgradeCost = payload.autoUpgradeCost ?? state.autoUpgradeCost;
+    state.clickUpgradeOwned = payload.clickUpgradeOwned ?? state.clickUpgradeOwned;
+    state.autoUpgradeOwned = payload.autoUpgradeOwned ?? state.autoUpgradeOwned;
+    state.critChance = payload.critChance ?? state.critChance;
+    state.critUpgradeCost = payload.critUpgradeCost ?? state.critUpgradeCost;
+    state.critUpgradeOwned = payload.critUpgradeOwned ?? state.critUpgradeOwned;
+    state.speedUpgradeCost = payload.speedUpgradeCost ?? state.speedUpgradeCost;
+    state.speedUpgradeOwned = payload.speedUpgradeOwned ?? state.speedUpgradeOwned;
+    state.clickBurstDuration = payload.clickBurstDuration ?? state.clickBurstDuration;
+    state.soundEnabled = payload.soundEnabled ?? state.soundEnabled;
+    state.totalClicks = payload.totalClicks ?? state.totalClicks;
+    state.combo = payload.combo ?? state.combo;
+    state.lastClickAt = payload.lastClickAt ?? state.lastClickAt;
+    state.volume = payload.volume ?? state.volume;
+    state.shopOpen = payload.shopOpen ?? state.shopOpen;
+    state.prestigePoints = payload.prestigePoints ?? state.prestigePoints;
+    state.totalEarnedThisRun = payload.totalEarnedThisRun ?? state.totalEarnedThisRun;
+
+    if (Array.isArray(payload.achievements)) {
+      payload.achievements.forEach((savedAchievement) => {
+        const match = achievements.find((item) => item.id === savedAchievement.id);
+        if (match) {
+          match.unlocked = savedAchievement.unlocked;
+        }
+      });
+    }
+  } catch (error) {
+    localStorage.removeItem(SAVE_KEY);
+  }
+};
+
+// Handle clicks
+clickButton.addEventListener("click", () => {
+  const now = Date.now();
+  if (now - state.lastClickAt < 1200) {
+    state.combo = Math.min(5, state.combo + 1);
+  } else {
+    state.combo = 1;
+  }
+  state.lastClickAt = now;
+
+  const comboBonus = state.combo >= 3 ? 1 : 0;
+  const isCrit = Math.random() < state.critChance;
+  const critMultiplier = isCrit ? 2 : 1;
+  const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
+  const finalEarned = addScore(earned);
+  state.totalClicks += 1;
+
+  spawnFloatingPoints(finalEarned, isCrit);
+  spawnParticles(8 + state.combo * 2);
+  triggerScreenShake();
+  if (isCrit) {
+    triggerCriticalShake();
+  }
+  triggerClickBurst();
+  playTone(isCrit ? 880 : 420 + state.combo * 25, 0.12);
+  updateUI();
+  checkAchievements();
+  saveGame();
+});
+
+// Upgrade: points per click
+upgradeClickButton.addEventListener("click", () => {
+  if (state.score < state.clickUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.clickUpgradeCost;
+  state.pointsPerClick += 1;
+  state.clickUpgradeCost = Math.floor(state.clickUpgradeCost * 1.6);
+  state.clickUpgradeOwned += 1;
+  spawnParticles(14);
+  playTone(520, 0.18, "square");
+  animatePurchase(upgradeClickButton);
+  updateUI();
+  saveGame();
+});
+
+// Upgrade: auto clicker
+upgradeAutoButton.addEventListener("click", () => {
+  if (state.score < state.autoUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.autoUpgradeCost;
+  state.autoClickers += 1;
+  state.autoUpgradeCost = Math.floor(state.autoUpgradeCost * 1.7);
+  state.autoUpgradeOwned += 1;
+  spawnParticles(16);
+  playTone(620, 0.2, "square");
+  animatePurchase(upgradeAutoButton);
+  updateUI();
+  checkAchievements();
+  saveGame();
+});
+
+upgradeCritButton.addEventListener("click", () => {
+  if (state.score < state.critUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.critUpgradeCost;
+  state.critChance = Math.min(0.45, state.critChance + 0.05);
+  state.critUpgradeCost = Math.floor(state.critUpgradeCost * 1.8);
+  state.critUpgradeOwned += 1;
+  spawnParticles(18);
+  playTone(760, 0.2, "triangle");
+  animatePurchase(upgradeCritButton);
+  updateUI();
+  saveGame();
+});
+
+upgradeSpeedButton.addEventListener("click", () => {
+  if (state.score < state.speedUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.speedUpgradeCost;
+  state.clickBurstDuration = Math.max(0.2, state.clickBurstDuration - 0.04);
+  state.speedUpgradeCost = Math.floor(state.speedUpgradeCost * 1.7);
+  state.speedUpgradeOwned += 1;
+  spawnParticles(12);
+  playTone(640, 0.16, "square");
+  animatePurchase(upgradeSpeedButton);
+  updateUI();
+  saveGame();
+});
+
+toggleSoundButton.addEventListener("click", () => {
+  state.soundEnabled = !state.soundEnabled;
+  updateSoundLabel();
+  saveGame();
+});
+
+resetSaveButton.addEventListener("click", () => {
+  localStorage.removeItem(SAVE_KEY);
+  window.location.reload();
+});
+
+toggleShopButton.addEventListener("click", () => {
+  state.shopOpen = !state.shopOpen;
+  updateShopState();
+  saveGame();
+});
+
+openPrestigeButton.addEventListener("click", () => {
+  const gain = getPrestigeGain();
+  if (gain <= 0) {
+    showToast("Earn more score to unlock prestige");
+    return;
+  }
+  prestigeMessage.textContent = `Are you sure? This will reset your progress. You will gain +${gain} prestige points.`;
+  prestigePopup.classList.add("show");
+});
+
+prestigeCancelButton.addEventListener("click", () => {
+  prestigePopup.classList.remove("show");
+});
+
+prestigeConfirmButton.addEventListener("click", () => {
+  const gain = getPrestigeGain();
+  if (gain <= 0) {
+    prestigePopup.classList.remove("show");
+    return;
+  }
+
+  const approved = window.confirm(`Confirm prestige reset for +${gain} prestige points?`);
+  if (!approved) {
+    return;
+  }
+
+  state.prestigePoints += gain;
+  prestigePopup.classList.remove("show");
+  showToast(`Prestige +${gain}! Permanent multiplier increased.`);
+  resetProgressForPrestige();
+});
+
+offlineClaimButton.addEventListener("click", () => {
+  if (offlineCountFrame) {
+    cancelAnimationFrame(offlineCountFrame);
+  }
+  offlinePopup.classList.add("closing");
+  setTimeout(() => {
+    offlinePopup.classList.remove("show");
+    offlinePopup.classList.remove("closing");
+  }, 220);
+});
+
+window.addEventListener("beforeunload", () => {
+  localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
+});
+
+// Auto clicker loop
+setInterval(() => {
+  if (state.autoClickers === 0) {
+    return;
+  }
+
+  addScore(state.autoClickers * state.pointsPerClick);
+  spawnParticles(4 + state.autoClickers);
+  updateUI();
+  checkAchievements();
+  saveGame();
+}, 1000);
+
+setInterval(() => {
+  if (state.combo > 1 && Date.now() - state.lastClickAt > 1600) {
+    state.combo = 1;
+    updateUI();
+  }
+}, 300);
+
+window.addEventListener("resize", resizeCanvas);
+
+loadGame();
+checkOfflineEarnings();
+displayedScore = state.score;
+resizeCanvas();
+renderAchievements();
+updateUI();
+saveGame();
+requestAnimationFrame(animateParticles);
