@@ -37,7 +37,7 @@
             <p id="prestige-requirement" class="prestige-stat">Requirement: 50K points</p>
             <p id="prestige-current" class="prestige-stat">Current: 0</p>
             <p id="prestige-reward" class="prestige-stat">Reward: +0.0 multiplier</p>
-            <button id="open-prestige" class="ghost-button" type="button">PRESTIGE BUTTON</button>
+            <button id="open-prestige" class="ghost-button" type="button">Need more points</button>
           </div>
         </div>
       </header>
@@ -47,6 +47,10 @@
           <div class="left-panel">
             <section class="play-area" id="play-area">
               <div class="playback">
+                <div class="reactor-rings" aria-hidden="true">
+                  <span class="ring ring-outer"></span>
+                  <span class="ring ring-inner"></span>
+                </div>
                 <button id="click-button" class="click-button" aria-label="Tap to gain points">
                   <span class="cube-glow" aria-hidden="true"></span>
                   <span class="cube" aria-hidden="true">
@@ -59,6 +63,11 @@
                 </button>
                 <canvas id="particle-canvas" class="particle-canvas"></canvas>
                 <div class="floating-points" id="floating-points"></div>
+              </div>
+              <div class="reactor-status" aria-live="polite">
+                <span class="reactor-label">Reactor State</span>
+                <span id="reactor-state" class="reactor-value">Stable</span>
+                <span id="reactor-boost-timer" class="reactor-timer">Core synchronized</span>
               </div>
               <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
             </section>

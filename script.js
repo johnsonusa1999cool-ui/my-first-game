@@ -127,6 +127,7 @@ const updatePrestigeLabel = () => {
   prestigeCurrentEl.textContent = `Current: ${formatNumber(state.totalEarnedThisRun)}`;
   prestigeRewardEl.textContent = `Reward: +${(gain * 0.1).toFixed(1)} multiplier`;
   openPrestigeButton.disabled = gain <= 0;
+  openPrestigeButton.textContent = gain > 0 ? `Prestige +${gain}` : "Need more points";
 };
 
 const resetProgressForPrestige = () => {
@@ -560,7 +561,7 @@ const loadGame = () => {
       });
     }
   } catch (error) {
-    console.error("Failed to load save:", error);
+    localStorage.removeItem(SAVE_KEY);
   }
 };
 
@@ -696,6 +697,11 @@ prestigeConfirmButton.addEventListener("click", () => {
   const gain = getPrestigeGain();
   if (gain <= 0) {
     prestigePopup.classList.remove("show");
+    return;
+  }
+
+  const approved = window.confirm(`Confirm prestige reset for +${gain} prestige points?`);
+  if (!approved) {
     return;
   }
 

@@ -19,7 +19,10 @@
 }
 
 body {
-  background: radial-gradient(circle at top, #1c1f37, var(--bg));
+  background:
+    radial-gradient(circle at 10% 0%, rgba(42, 129, 255, 0.2), transparent 42%),
+    radial-gradient(circle at 88% 8%, rgba(99, 65, 255, 0.2), transparent 46%),
+    radial-gradient(circle at top, #1c1f37, var(--bg));
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -28,7 +31,7 @@ body {
 }
 
 .app {
-  width: min(1100px, 100%);
+  width: min(1220px, 100%);
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -61,14 +64,14 @@ body {
 }
 
 .score-card {
-  background: var(--card);
+  background: linear-gradient(160deg, rgba(21, 23, 38, 0.95), rgba(15, 19, 34, 0.92));
   border-radius: 18px;
-  padding: 16px 20px;
-  min-width: 240px;
+  padding: 18px 22px;
+  min-width: 280px;
   display: grid;
   gap: 6px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(124, 92, 255, 0.2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(46, 252, 255, 0.08);
+  border: 1px solid rgba(124, 92, 255, 0.25);
 }
 
 .score-card .label {
@@ -165,7 +168,8 @@ body {
 
 .game-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr 350px;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr) minmax(300px, 360px);
+  grid-template-areas: "play achievements shop";
   gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
@@ -173,14 +177,27 @@ body {
 }
 
 .play-area {
-  background: var(--card);
+  background:
+    linear-gradient(150deg, rgba(20, 24, 40, 0.96), rgba(8, 12, 24, 0.95)),
+    repeating-linear-gradient(90deg, rgba(46, 252, 255, 0.05) 0 1px, transparent 1px 16px);
   border-radius: 24px;
   padding: 32px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(124, 92, 255, 0.15);
+  border: 1px solid rgba(46, 252, 255, 0.22);
+  box-shadow: inset 0 0 26px rgba(46, 252, 255, 0.08), 0 18px 38px rgba(0, 0, 0, 0.42);
 }
+
+.play-area::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(46, 252, 255, 0.14);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
 
 .play-area.shake {
   animation: screen-shake 0.25s ease;
@@ -197,8 +214,63 @@ body {
   height: 220px;
 }
 
+.reactor-rings {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(46, 252, 255, 0.35);
+  box-shadow: 0 0 20px rgba(46, 252, 255, 0.25);
+}
+
+.ring-outer {
+  width: 230px;
+  height: 230px;
+  animation: orbit 8s linear infinite;
+}
+
+.ring-inner {
+  width: 168px;
+  height: 168px;
+  border-color: rgba(124, 92, 255, 0.45);
+  animation: orbit 5.8s linear infinite reverse;
+}
+
+.reactor-status {
+  margin-top: 14px;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.reactor-label {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.reactor-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(46, 252, 255, 0.9);
+}
+
+.reactor-timer {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
 .click-button {
   position: relative;
+  z-index: 2;
   width: 190px;
   height: 190px;
   border: none;
@@ -234,6 +306,7 @@ body {
   animation: cube-click-pulse var(--burst-duration) ease-out;
   box-shadow: 0 0 38px rgba(46, 252, 255, 0.55), 0 0 110px rgba(124, 92, 255, 0.4);
 }
+
 
 .click-button.burst::after {
   content: "";
@@ -306,6 +379,15 @@ body {
   font-size: 0.66rem;
   color: rgba(204, 247, 255, 0.88);
   text-shadow: 0 0 10px rgba(46, 252, 255, 0.75);
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
@@ -414,7 +496,6 @@ body {
 }
 
 .shop-panel {
-  position: relative;
   width: 100%;
   max-height: none;
   overflow: visible;
@@ -425,15 +506,15 @@ body {
 }
 
 .left-panel {
-  grid-column: 1;
+  grid-area: play;
 }
 
 .center-panel {
-  grid-column: 2;
+  grid-area: achievements;
 }
 
 .shop-panel {
-  grid-column: 3;
+  grid-area: shop;
 }
 
 .shop-header {
@@ -580,6 +661,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 3;
 }
 
 .floating-point {
@@ -601,6 +683,7 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 1;
 }
 
 @keyframes float-up {
@@ -622,7 +705,7 @@ body {
   place-items: center;
   background: rgba(12, 13, 21, 0.72);
   backdrop-filter: blur(2px);
-  z-index: 20;
+  z-index: 2000;
   opacity: 0;
   pointer-events: none;
   isolation: isolate;
@@ -767,6 +850,7 @@ body {
   transform: translateY(12px);
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1200;
 }
 
 .toast.show {
@@ -777,12 +861,10 @@ body {
 @media (max-width: 900px) {
   .game-layout {
     grid-template-columns: 1fr;
-  }
-
-  .left-panel,
-  .center-panel,
-  .shop-panel {
-    grid-column: 1;
+    grid-template-areas:
+      "play"
+      "achievements"
+      "shop";
   }
 }
 
@@ -794,16 +876,29 @@ body {
 
   .game-layout {
     grid-template-columns: 1fr;
-  }
-
-  .left-panel,
-  .center-panel,
-  .shop-panel {
-    grid-column: 1;
+    grid-template-areas:
+      "play"
+      "achievements"
+      "shop";
   }
 
   .playback {
     height: 200px;
+  }
+
+  .reactor-rings {
+    width: 198px;
+    height: 198px;
+  }
+
+  .ring-outer {
+    width: 198px;
+    height: 198px;
+  }
+
+  .ring-inner {
+    width: 146px;
+    height: 146px;
   }
 
   .click-button {
