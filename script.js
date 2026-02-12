@@ -21,6 +21,7 @@ const missionResetEl = document.querySelector("#mission-reset");
 const toggleSoundButton = document.querySelector("#toggle-sound");
 const resetSaveButton = document.querySelector("#reset-save");
 const toggleShopButton = document.querySelector("#toggle-shop");
+const toggleLocaleButton = document.querySelector("#toggle-locale");
 const walletEl = document.querySelector("#wallet");
 const particleCanvas = document.querySelector("#particle-canvas");
 const comboLabel = document.querySelector("#combo-label");
@@ -52,6 +53,10 @@ const LAST_PLAYED_KEY = "neon-clicker-last-played";
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 const DAILY_MISSION_KEY = "neon-clicker-daily-missions";
 const OVERLOAD_DURATION_MS = 10000;
+const LOCALE_KEY = "neon-clicker-locale";
+const ANALYTICS_KEY = "neon-clicker-analytics";
+const MAX_ANALYTICS_EVENTS = 200;
+const MAX_PARTICLES = 240;
 
 // Core game state
 const state = {
@@ -78,6 +83,7 @@ const state = {
   totalEarnedThisRun: 0,
   energy: 0,
   overloadUntil: 0,
+  locale: "en",
 };
 
 let displayedScore = 0;
@@ -86,6 +92,101 @@ let scorePopTimeout;
 let previousScoreLabel = "";
 let dailyMissions = [];
 let lastMissionSignature = "";
+
+const i18n = {
+  en: {
+    score: "Score",
+    perClick: "per click",
+    perSecond: " / sec",
+    combo: "Combo",
+    energy: "Energy",
+    energyOverload: "OVERLOAD",
+    soundOn: "Sound: On",
+    soundOff: "Sound: Off",
+    shop: "Shop",
+    language: "Language",
+    prestigeNeedMore: "Need more points",
+    prestigeAction: "Prestige",
+    reactorStable: "Stable",
+    reactorChargeHint: "Charge the core to overload",
+    reactorOverloadState: "OVERLOAD x2",
+    reactorOverloadTimer: "Overload ends in",
+    missionResets: "Resets",
+    missionComplete: "Daily complete",
+    overloadActivated: "Energy overload activated! x2 points",
+    awayFor: "Away for",
+    points: "points",
+  },
+  ru: {
+    score: "Очки",
+    perClick: "за клик",
+    perSecond: " / сек",
+    combo: "Комбо",
+    energy: "Энергия",
+    energyOverload: "ПЕРЕГРУЗ",
+    soundOn: "Звук: Вкл",
+    soundOff: "Звук: Выкл",
+    shop: "Магазин",
+    language: "Язык",
+    prestigeNeedMore: "Нужно больше очков",
+    prestigeAction: "Престиж",
+    reactorStable: "Стабильно",
+    reactorChargeHint: "Зарядите ядро для перегруза",
+    reactorOverloadState: "ПЕРЕГРУЗ x2",
+    reactorOverloadTimer: "Перегруз закончится через",
+    missionResets: "Сброс",
+    missionComplete: "Ежедневка выполнена",
+    overloadActivated: "Энергоперегруз активирован! x2 очки",
+    awayFor: "Не в игре",
+    points: "очков",
+  },
+};
+
+const t = (key) => i18n[state.locale]?.[key] ?? i18n.en[key] ?? key;
+
+const logAnalyticsEvent = (name, payload = {}) => {
+  try {
+    const now = Date.now();
+    const existing = JSON.parse(localStorage.getItem(ANALYTICS_KEY) || "[]");
+    if (!Array.isArray(existing)) {
+      return;
+    }
+    existing.push({ name, payload, at: now });
+    if (existing.length > MAX_ANALYTICS_EVENTS) {
+      existing.splice(0, existing.length - MAX_ANALYTICS_EVENTS);
+    }
+    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(existing));
+  } catch {
+    // noop
+  }
+};
+
+const safeNumber = (value, fallback = 0, min = -Infinity, max = Infinity) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+};
+
+const applyStaticLocale = () => {
+  const labelEl = document.querySelector('.score-card .label');
+  if (labelEl) {
+    labelEl.textContent = t('score');
+  }
+  toggleShopButton.textContent = t('shop');
+  toggleLocaleButton.textContent = `${t('language')}: ${state.locale.toUpperCase()}`;
+  document.querySelector('.energy-header span').textContent = t('energy');
+};
+
+const resolveInitialLocale = () => {
+  const stored = localStorage.getItem(LOCALE_KEY);
+  if (stored === 'ru' || stored === 'en') {
+    state.locale = stored;
+    return;
+  }
+  state.locale = navigator.language && navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+};
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -100,14 +201,14 @@ const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 2 : 1);
 const getCoreLabel = () => {
   if (getOverloadMultiplier() > 1) {
     const secondsLeft = Math.max(0, Math.ceil((state.overloadUntil - Date.now()) / 1000));
-    return { stateLabel: "OVERLOAD x2", timerLabel: `Overload ends in ${secondsLeft}s` };
+    return { stateLabel: t("reactorOverloadState"), timerLabel: `${t("reactorOverloadTimer")} ${secondsLeft}s` };
   }
-  return { stateLabel: "Stable", timerLabel: "Charge the core to overload" };
+  return { stateLabel: t("reactorStable"), timerLabel: t("reactorChargeHint") };
 };
 
 const refreshEnergyUI = () => {
   energyFillEl.style.width = `${Math.min(100, state.energy)}%`;
-  energyStatusEl.textContent = getOverloadMultiplier() > 1 ? "OVERLOAD" : `${Math.floor(state.energy)}%`;
+  energyStatusEl.textContent = getOverloadMultiplier() > 1 ? t("energyOverload") : `${Math.floor(state.energy)}%`;
   const labels = getCoreLabel();
   reactorStateEl.textContent = labels.stateLabel;
   reactorTimerEl.textContent = labels.timerLabel;
@@ -128,7 +229,8 @@ const updateDailyMissions = () => {
     const wasComplete = mission.completed;
     mission.completed = mission.progress >= mission.target;
     if (!wasComplete && mission.completed) {
-      showToast(`Daily complete: ${mission.label}`);
+      showToast(`${t("missionComplete")}: ${mission.label}`);
+      logAnalyticsEvent("daily_mission_completed", { id: mission.id });
     }
   });
 };
@@ -151,7 +253,7 @@ const renderDailyMissions = () => {
     localStorage.setItem(DAILY_MISSION_KEY, JSON.stringify({ day: getTodayKey(), missions: dailyMissions }));
   }
 
-  missionResetEl.textContent = `Resets: ${getTodayKey()}`;
+  missionResetEl.textContent = `${t("missionResets")}: ${getTodayKey()}`;
 };
 
 const hydrateDailyMissions = () => {
@@ -249,7 +351,7 @@ const updatePrestigeLabel = () => {
   prestigeCurrentEl.textContent = `Current: ${formatNumber(state.totalEarnedThisRun)}`;
   prestigeRewardEl.textContent = `Reward: +${(gain * 0.1).toFixed(1)} multiplier`;
   openPrestigeButton.disabled = gain <= 0;
-  openPrestigeButton.textContent = gain > 0 ? `Prestige +${gain}` : "Need more points";
+  openPrestigeButton.textContent = gain > 0 ? `${t("prestigeAction")} +${gain}` : t("prestigeNeedMore");
 };
 
 const resetProgressForPrestige = () => {
@@ -335,7 +437,9 @@ const ctx = particleCanvas.getContext("2d");
 
 const spawnParticles = (amount) => {
   const rect = particleCanvas.getBoundingClientRect();
-  for (let i = 0; i < amount; i += 1) {
+  const availableSlots = Math.max(0, MAX_PARTICLES - particles.length);
+  const count = Math.min(amount, availableSlots);
+  for (let i = 0; i < count; i += 1) {
     particles.push({
       x: rect.width / 2,
       y: rect.height / 2,
@@ -425,7 +529,7 @@ const showToast = (message) => {
 };
 
 const updateSoundLabel = () => {
-  toggleSoundButton.textContent = `Sound: ${state.soundEnabled ? "On" : "Off"}`;
+  toggleSoundButton.textContent = state.soundEnabled ? t("soundOn") : t("soundOff");
 };
 
 
@@ -443,14 +547,14 @@ const animateOfflineRewardValue = (target) => {
     const progress = Math.min(1, (now - start) / duration);
     const eased = easeOutCubic(progress);
     const currentValue = Math.floor(target * eased);
-    offlineEarned.textContent = `${formatNumber(currentValue)} points`;
+    offlineEarned.textContent = `${formatNumber(currentValue)} ${t("points")}`;
 
     if (progress < 1) {
       offlineCountFrame = requestAnimationFrame(tick);
       return;
     }
 
-    offlineEarned.textContent = `${formatNumber(target)} points`;
+    offlineEarned.textContent = `${formatNumber(target)} ${t("points")}`;
   };
 
   offlineCountFrame = requestAnimationFrame(tick);
@@ -462,7 +566,7 @@ const showOfflinePopup = (earned, offlineSeconds) => {
   if (offlineSeconds > 0) {
     const hours = Math.floor(offlineSeconds / 3600);
     const minutes = Math.floor((offlineSeconds % 3600) / 60);
-    offlineTime.textContent = `Away for ${hours}h ${minutes}m`;
+    offlineTime.textContent = `${t("awayFor")} ${hours}h ${minutes}m`;
   } else {
     offlineTime.textContent = "";
   }
@@ -544,8 +648,8 @@ const triggerClickBurst = () => {
 
 // Update UI when state changes
 const updateUI = () => {
-  perClickEl.textContent = `+${formatNumber(state.pointsPerClick)} per click`;
-  perSecondEl.textContent = `${formatNumber(state.autoClickers * state.pointsPerClick)} / sec`;
+  perClickEl.textContent = `+${formatNumber(state.pointsPerClick)} ${t("perClick")}`;
+  perSecondEl.textContent = `${formatNumber(state.autoClickers * state.pointsPerClick)}${t("perSecond")}`;
 
   upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
   upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
@@ -563,7 +667,7 @@ const updateUI = () => {
   updateSoundLabel();
   updateShopState();
 
-  comboLabel.textContent = `Combo x${state.combo}`;
+  comboLabel.textContent = `${t("combo")} x${state.combo}`;
   comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
   clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
   updatePrestigeLabel();
@@ -637,6 +741,7 @@ const saveGame = () => {
     totalEarnedThisRun: state.totalEarnedThisRun,
     energy: state.energy,
     overloadUntil: state.overloadUntil,
+    locale: state.locale,
   };
 
   if (saveTimeout) {
@@ -657,29 +762,32 @@ const loadGame = () => {
 
   try {
     const payload = JSON.parse(saved);
-    state.score = payload.score ?? state.score;
-    state.pointsPerClick = payload.pointsPerClick ?? state.pointsPerClick;
-    state.autoClickers = payload.autoClickers ?? state.autoClickers;
-    state.clickUpgradeCost = payload.clickUpgradeCost ?? state.clickUpgradeCost;
-    state.autoUpgradeCost = payload.autoUpgradeCost ?? state.autoUpgradeCost;
-    state.clickUpgradeOwned = payload.clickUpgradeOwned ?? state.clickUpgradeOwned;
-    state.autoUpgradeOwned = payload.autoUpgradeOwned ?? state.autoUpgradeOwned;
-    state.critChance = payload.critChance ?? state.critChance;
-    state.critUpgradeCost = payload.critUpgradeCost ?? state.critUpgradeCost;
-    state.critUpgradeOwned = payload.critUpgradeOwned ?? state.critUpgradeOwned;
-    state.speedUpgradeCost = payload.speedUpgradeCost ?? state.speedUpgradeCost;
-    state.speedUpgradeOwned = payload.speedUpgradeOwned ?? state.speedUpgradeOwned;
-    state.clickBurstDuration = payload.clickBurstDuration ?? state.clickBurstDuration;
+    state.score = safeNumber(payload.score, state.score, 0);
+    state.pointsPerClick = safeNumber(payload.pointsPerClick, state.pointsPerClick, 1);
+    state.autoClickers = safeNumber(payload.autoClickers, state.autoClickers, 0);
+    state.clickUpgradeCost = safeNumber(payload.clickUpgradeCost, state.clickUpgradeCost, 1);
+    state.autoUpgradeCost = safeNumber(payload.autoUpgradeCost, state.autoUpgradeCost, 1);
+    state.clickUpgradeOwned = safeNumber(payload.clickUpgradeOwned, state.clickUpgradeOwned, 0);
+    state.autoUpgradeOwned = safeNumber(payload.autoUpgradeOwned, state.autoUpgradeOwned, 0);
+    state.critChance = safeNumber(payload.critChance, state.critChance, 0, 0.45);
+    state.critUpgradeCost = safeNumber(payload.critUpgradeCost, state.critUpgradeCost, 1);
+    state.critUpgradeOwned = safeNumber(payload.critUpgradeOwned, state.critUpgradeOwned, 0);
+    state.speedUpgradeCost = safeNumber(payload.speedUpgradeCost, state.speedUpgradeCost, 1);
+    state.speedUpgradeOwned = safeNumber(payload.speedUpgradeOwned, state.speedUpgradeOwned, 0);
+    state.clickBurstDuration = safeNumber(payload.clickBurstDuration, state.clickBurstDuration, 0.1, 1);
     state.soundEnabled = payload.soundEnabled ?? state.soundEnabled;
-    state.totalClicks = payload.totalClicks ?? state.totalClicks;
-    state.combo = payload.combo ?? state.combo;
-    state.lastClickAt = payload.lastClickAt ?? state.lastClickAt;
-    state.volume = payload.volume ?? state.volume;
+    state.totalClicks = safeNumber(payload.totalClicks, state.totalClicks, 0);
+    state.combo = safeNumber(payload.combo, state.combo, 1, 5);
+    state.lastClickAt = safeNumber(payload.lastClickAt, state.lastClickAt, 0);
+    state.volume = safeNumber(payload.volume, state.volume, 0, 1);
     state.shopOpen = payload.shopOpen ?? state.shopOpen;
-    state.prestigePoints = payload.prestigePoints ?? state.prestigePoints;
-    state.totalEarnedThisRun = payload.totalEarnedThisRun ?? state.totalEarnedThisRun;
-    state.energy = payload.energy ?? state.energy;
-    state.overloadUntil = payload.overloadUntil ?? state.overloadUntil;
+    state.prestigePoints = safeNumber(payload.prestigePoints, state.prestigePoints, 0);
+    state.totalEarnedThisRun = safeNumber(payload.totalEarnedThisRun, state.totalEarnedThisRun, 0);
+    state.energy = safeNumber(payload.energy, state.energy, 0, 100);
+    state.overloadUntil = safeNumber(payload.overloadUntil, state.overloadUntil, 0);
+    if (payload.locale === "ru" || payload.locale === "en") {
+      state.locale = payload.locale;
+    }
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
@@ -716,7 +824,8 @@ clickButton.addEventListener("click", () => {
     state.energy = 0;
     state.overloadUntil = Date.now() + OVERLOAD_DURATION_MS;
     spawnParticles(24);
-    showToast("Energy overload activated! x2 points");
+    showToast(t("overloadActivated"));
+    logAnalyticsEvent("energy_overload_activated", { combo: state.combo, totalClicks: state.totalClicks });
   }
 
   spawnFloatingPoints(finalEarned, isCrit);
@@ -730,6 +839,9 @@ clickButton.addEventListener("click", () => {
   updateUI();
   checkAchievements();
   saveGame();
+  if (state.totalClicks % 25 === 0) {
+    logAnalyticsEvent("click_batch", { totalClicks: state.totalClicks, score: state.score });
+  }
 });
 
 // Upgrade: points per click
@@ -745,6 +857,7 @@ upgradeClickButton.addEventListener("click", () => {
   spawnParticles(14);
   playTone(520, 0.18, "square");
   animatePurchase(upgradeClickButton);
+  logAnalyticsEvent("upgrade_purchase", { type: "click", owned: state.clickUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -762,6 +875,7 @@ upgradeAutoButton.addEventListener("click", () => {
   spawnParticles(16);
   playTone(620, 0.2, "square");
   animatePurchase(upgradeAutoButton);
+  logAnalyticsEvent("upgrade_purchase", { type: "auto", owned: state.autoUpgradeOwned });
   updateUI();
   checkAchievements();
   saveGame();
@@ -779,6 +893,7 @@ upgradeCritButton.addEventListener("click", () => {
   spawnParticles(18);
   playTone(760, 0.2, "triangle");
   animatePurchase(upgradeCritButton);
+  logAnalyticsEvent("upgrade_purchase", { type: "crit", owned: state.critUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -795,6 +910,7 @@ upgradeSpeedButton.addEventListener("click", () => {
   spawnParticles(12);
   playTone(640, 0.16, "square");
   animatePurchase(upgradeSpeedButton);
+  logAnalyticsEvent("upgrade_purchase", { type: "speed", owned: state.speedUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -814,6 +930,14 @@ toggleShopButton.addEventListener("click", () => {
   state.shopOpen = !state.shopOpen;
   updateShopState();
   saveGame();
+});
+
+toggleLocaleButton.addEventListener("click", () => {
+  state.locale = state.locale === "en" ? "ru" : "en";
+  localStorage.setItem(LOCALE_KEY, state.locale);
+  applyStaticLocale();
+  updateUI();
+  logAnalyticsEvent("locale_changed", { locale: state.locale });
 });
 
 openPrestigeButton.addEventListener("click", () => {
@@ -892,12 +1016,14 @@ setInterval(() => {
 
 window.addEventListener("resize", resizeCanvas);
 
+resolveInitialLocale();
 hydrateDailyMissions();
 loadGame();
 checkOfflineEarnings();
 displayedScore = state.score;
 resizeCanvas();
 renderAchievements();
+applyStaticLocale();
 updateUI();
 saveGame();
 requestAnimationFrame(animateParticles);
