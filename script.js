@@ -72,6 +72,8 @@ const state = {
 
 let displayedScore = 0;
 let offlineCountFrame;
+let scorePopTimeout;
+let previousScoreLabel = "";
 
 const formatNumber = (value) => {
   const absValue = Math.abs(value);
@@ -98,8 +100,22 @@ const updateAnimatedScore = () => {
     displayedScore = state.score;
   }
 
-  scoreEl.textContent = formatNumber(displayedScore);
-  walletEl.textContent = formatNumber(displayedScore);
+  const scoreLabel = formatNumber(displayedScore);
+  scoreEl.textContent = scoreLabel;
+  walletEl.textContent = scoreLabel;
+
+  if (scoreLabel !== previousScoreLabel) {
+    previousScoreLabel = scoreLabel;
+    scoreEl.classList.remove("score-pop");
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add("score-pop");
+    if (scorePopTimeout) {
+      clearTimeout(scorePopTimeout);
+    }
+    scorePopTimeout = setTimeout(() => {
+      scoreEl.classList.remove("score-pop");
+    }, 220);
+  }
 };
 
 

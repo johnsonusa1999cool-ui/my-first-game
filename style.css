@@ -82,6 +82,14 @@ body {
 .score-card .value {
   font-size: 2rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(46, 252, 255, 0.28);
+  transition: filter 0.25s ease, text-shadow 0.25s ease;
+}
+
+.score-card .value.score-pop {
+  filter: brightness(1.15);
+  text-shadow: 0 0 20px rgba(46, 252, 255, 0.58), 0 0 36px rgba(124, 92, 255, 0.25);
 }
 
 .per-click,
@@ -333,7 +341,7 @@ body {
   width: 84px;
   height: 84px;
   transform-style: preserve-3d;
-  animation: cube-spin 7s linear infinite;
+  animation: cube-spin 6.2s linear infinite;
   z-index: 1;
 }
 
@@ -344,6 +352,7 @@ body {
   border-radius: 10px;
   background: linear-gradient(145deg, rgba(16, 38, 66, 0.7), rgba(89, 49, 168, 0.35));
   box-shadow: inset 0 0 18px rgba(46, 252, 255, 0.3), 0 0 18px rgba(46, 252, 255, 0.35);
+  backface-visibility: hidden;
 }
 
 .cube-front {
@@ -726,14 +735,26 @@ body {
 }
 
 #offline-popup .offline-popup-content {
-  background: linear-gradient(180deg, rgba(27, 29, 48, 0.98), rgba(20, 22, 38, 0.98));
-  border: 1px solid rgba(124, 92, 255, 0.4);
-  border-radius: 20px;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(124, 92, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(32, 36, 62, 0.98), rgba(18, 20, 36, 0.98)),
+    radial-gradient(circle at 50% -20%, rgba(46, 252, 255, 0.18), transparent 55%);
+  border: 1px solid rgba(124, 92, 255, 0.45);
+  border-radius: 22px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(124, 92, 255, 0.28), inset 0 0 0 1px rgba(46, 252, 255, 0.1);
   text-align: center;
-  padding: 22px 20px 18px;
+  padding: 24px 20px 18px;
   transform: scale(0.94);
   opacity: 0;
+  overflow: hidden;
+}
+
+#offline-popup .offline-popup-content::before {
+  content: "";
+  position: absolute;
+  inset: -40% -120%;
+  background: linear-gradient(110deg, transparent 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+  animation: modal-scan 2.8s linear infinite;
+  pointer-events: none;
 }
 
 #offline-popup.show .offline-popup-content {
@@ -745,21 +766,38 @@ body {
 }
 
 #offline-popup .offline-title {
-  font-size: 1.35rem;
-  margin-bottom: 6px;
+  font-size: 1.28rem;
+  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#offline-popup .offline-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #cafcff;
+  background: radial-gradient(circle at 35% 30%, rgba(46, 252, 255, 0.7), rgba(124, 92, 255, 0.35));
+  box-shadow: 0 0 16px rgba(46, 252, 255, 0.6);
 }
 
 #offline-popup .offline-subtitle {
-  color: var(--muted);
-  font-size: 0.9rem;
+  color: rgba(205, 214, 240, 0.85);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 #offline-popup .offline-earned {
-  margin-top: 10px;
-  font-size: clamp(1.4rem, 4vw, 2rem);
+  margin-top: 12px;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
   font-weight: 800;
-  color: var(--accent-strong);
-  text-shadow: 0 0 16px rgba(154, 125, 255, 0.45);
+  color: #c9f8ff;
+  text-shadow: 0 0 16px rgba(46, 252, 255, 0.52), 0 0 24px rgba(154, 125, 255, 0.4);
+  font-variant-numeric: tabular-nums;
 }
 
 #offline-popup .offline-time {
@@ -773,17 +811,27 @@ body {
   margin-top: 14px;
   width: 100%;
   border-radius: 12px;
-  border: 1px solid rgba(124, 92, 255, 0.45);
-  background: rgba(124, 92, 255, 0.18);
+  border: 1px solid rgba(124, 92, 255, 0.55);
+  background: linear-gradient(135deg, rgba(46, 252, 255, 0.2), rgba(124, 92, 255, 0.28));
   color: var(--text);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   padding: 12px 16px;
   position: relative;
   z-index: 3;
   pointer-events: auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+
+#offline-popup #offline-claim::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.28) 50%, transparent 80%);
+  transform: translateX(-120%);
+  animation: claim-shimmer 2.2s ease-in-out infinite;
 }
 
 #offline-popup #offline-claim:hover {
@@ -915,4 +963,14 @@ body {
     bottom: 16px;
     font-size: 0.58rem;
   }
+}
+
+@keyframes modal-scan {
+  from { transform: translateX(-18%); }
+  to { transform: translateX(18%); }
+}
+
+@keyframes claim-shimmer {
+  0%, 100% { transform: translateX(-120%); }
+  55% { transform: translateX(120%); }
 }
