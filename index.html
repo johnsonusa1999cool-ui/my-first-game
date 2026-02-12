@@ -26,6 +26,15 @@
               <span id="combo-fill"></span>
             </div>
           </div>
+          <div class="energy-panel">
+            <div class="energy-header">
+              <span>Energy</span>
+              <span id="energy-status">0%</span>
+            </div>
+            <div class="energy-bar">
+              <span id="energy-fill"></span>
+            </div>
+          </div>
           <div class="score-actions">
             <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
             <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
@@ -65,9 +74,9 @@
                 <div class="floating-points" id="floating-points"></div>
               </div>
               <div class="reactor-status" aria-live="polite">
-                <span class="reactor-label">Reactor State</span>
+                <span class="reactor-label">Core Mode</span>
                 <span id="reactor-state" class="reactor-value">Stable</span>
-                <span id="reactor-boost-timer" class="reactor-timer">Core synchronized</span>
+                <span id="reactor-boost-timer" class="reactor-timer">Charge the core to overload</span>
               </div>
               <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
             </section>
@@ -77,6 +86,13 @@
             <section class="achievements" aria-label="Achievements">
               <h2>Achievements</h2>
               <ul id="achievement-list" class="achievement-list"></ul>
+            </section>
+            <section class="daily-missions" aria-label="Daily Missions">
+              <div class="daily-header">
+                <h2>Daily Missions</h2>
+                <span id="mission-reset" class="daily-reset">Resets daily</span>
+              </div>
+              <ul id="daily-mission-list" class="daily-mission-list"></ul>
             </section>
           </div>
 

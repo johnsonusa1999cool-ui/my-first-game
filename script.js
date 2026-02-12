@@ -16,6 +16,8 @@ const upgradeSpeedCostEl = document.querySelector("#upgrade-speed-cost");
 const upgradeCritOwnedEl = document.querySelector("#upgrade-crit-owned");
 const upgradeSpeedOwnedEl = document.querySelector("#upgrade-speed-owned");
 const achievementList = document.querySelector("#achievement-list");
+const dailyMissionList = document.querySelector("#daily-mission-list");
+const missionResetEl = document.querySelector("#mission-reset");
 const toggleSoundButton = document.querySelector("#toggle-sound");
 const resetSaveButton = document.querySelector("#reset-save");
 const toggleShopButton = document.querySelector("#toggle-shop");
@@ -40,10 +42,16 @@ const prestigeLevelEl = document.querySelector("#prestige-level");
 const prestigeRequirementEl = document.querySelector("#prestige-requirement");
 const prestigeCurrentEl = document.querySelector("#prestige-current");
 const prestigeRewardEl = document.querySelector("#prestige-reward");
+const energyFillEl = document.querySelector("#energy-fill");
+const energyStatusEl = document.querySelector("#energy-status");
+const reactorStateEl = document.querySelector("#reactor-state");
+const reactorTimerEl = document.querySelector("#reactor-boost-timer");
 
 const SAVE_KEY = "neon-clicker-save";
 const LAST_PLAYED_KEY = "neon-clicker-last-played";
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
+const DAILY_MISSION_KEY = "neon-clicker-daily-missions";
+const OVERLOAD_DURATION_MS = 10000;
 
 // Core game state
 const state = {
@@ -68,12 +76,110 @@ const state = {
   shopOpen: true,
   prestigePoints: 0,
   totalEarnedThisRun: 0,
+  energy: 0,
+  overloadUntil: 0,
 };
 
 let displayedScore = 0;
 let offlineCountFrame;
 let scorePopTimeout;
 let previousScoreLabel = "";
+let dailyMissions = [];
+let lastMissionSignature = "";
+
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
+
+const buildDailyMissions = () => ([
+  { id: "mission-clicks", label: "Perform 200 clicks", type: "clicks", target: 200, progress: 0, completed: false },
+  { id: "mission-score", label: "Reach 15K score", type: "score", target: 15000, progress: 0, completed: false },
+  { id: "mission-auto", label: "Own 8 auto clickers", type: "auto", target: 8, progress: 0, completed: false },
+]);
+
+const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 2 : 1);
+
+const getCoreLabel = () => {
+  if (getOverloadMultiplier() > 1) {
+    const secondsLeft = Math.max(0, Math.ceil((state.overloadUntil - Date.now()) / 1000));
+    return { stateLabel: "OVERLOAD x2", timerLabel: `Overload ends in ${secondsLeft}s` };
+  }
+  return { stateLabel: "Stable", timerLabel: "Charge the core to overload" };
+};
+
+const refreshEnergyUI = () => {
+  energyFillEl.style.width = `${Math.min(100, state.energy)}%`;
+  energyStatusEl.textContent = getOverloadMultiplier() > 1 ? "OVERLOAD" : `${Math.floor(state.energy)}%`;
+  const labels = getCoreLabel();
+  reactorStateEl.textContent = labels.stateLabel;
+  reactorTimerEl.textContent = labels.timerLabel;
+};
+
+const updateDailyMissions = () => {
+  dailyMissions.forEach((mission) => {
+    if (mission.type === "clicks") {
+      mission.progress = state.totalClicks;
+    }
+    if (mission.type === "score") {
+      mission.progress = state.totalEarnedThisRun;
+    }
+    if (mission.type === "auto") {
+      mission.progress = state.autoClickers;
+    }
+
+    const wasComplete = mission.completed;
+    mission.completed = mission.progress >= mission.target;
+    if (!wasComplete && mission.completed) {
+      showToast(`Daily complete: ${mission.label}`);
+    }
+  });
+};
+
+const renderDailyMissions = () => {
+  dailyMissionList.innerHTML = "";
+  dailyMissions.forEach((mission) => {
+    const li = document.createElement("li");
+    li.className = "daily-mission-item";
+    if (mission.completed) {
+      li.classList.add("completed");
+    }
+    li.innerHTML = `<span>${mission.label}</span><span>${formatNumber(Math.min(mission.progress, mission.target))}/${formatNumber(mission.target)}</span>`;
+    dailyMissionList.appendChild(li);
+  });
+
+  const signature = JSON.stringify(dailyMissions.map((mission) => ({ id: mission.id, progress: mission.progress, completed: mission.completed })));
+  if (signature !== lastMissionSignature) {
+    lastMissionSignature = signature;
+    localStorage.setItem(DAILY_MISSION_KEY, JSON.stringify({ day: getTodayKey(), missions: dailyMissions }));
+  }
+
+  missionResetEl.textContent = `Resets: ${getTodayKey()}`;
+};
+
+const hydrateDailyMissions = () => {
+  const raw = localStorage.getItem(DAILY_MISSION_KEY);
+  if (!raw) {
+    dailyMissions = buildDailyMissions();
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.day !== getTodayKey() || !Array.isArray(parsed.missions)) {
+      dailyMissions = buildDailyMissions();
+      return;
+    }
+
+    const template = buildDailyMissions();
+    dailyMissions = template.map((mission) => {
+      const saved = parsed.missions.find((item) => item.id === mission.id);
+      if (!saved) {
+        return mission;
+      }
+      return { ...mission, progress: saved.progress ?? 0, completed: !!saved.completed };
+    });
+  } catch {
+    dailyMissions = buildDailyMissions();
+  }
+};
 
 const formatNumber = (value) => {
   const absValue = Math.abs(value);
@@ -122,7 +228,7 @@ const updateAnimatedScore = () => {
 const getPrestigeMultiplier = () => 1 + state.prestigePoints * 0.1;
 
 const addScore = (baseAmount) => {
-  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier());
+  const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier() * getOverloadMultiplier());
   state.score += boostedAmount;
   state.totalEarnedThisRun += boostedAmount;
   return boostedAmount;
@@ -461,6 +567,9 @@ const updateUI = () => {
   comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
   clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
   updatePrestigeLabel();
+  refreshEnergyUI();
+  updateDailyMissions();
+  renderDailyMissions();
 };
 
 // Visual feedback when clicking
@@ -526,6 +635,8 @@ const saveGame = () => {
     shopOpen: state.shopOpen,
     prestigePoints: state.prestigePoints,
     totalEarnedThisRun: state.totalEarnedThisRun,
+    energy: state.energy,
+    overloadUntil: state.overloadUntil,
   };
 
   if (saveTimeout) {
@@ -567,6 +678,8 @@ const loadGame = () => {
     state.shopOpen = payload.shopOpen ?? state.shopOpen;
     state.prestigePoints = payload.prestigePoints ?? state.prestigePoints;
     state.totalEarnedThisRun = payload.totalEarnedThisRun ?? state.totalEarnedThisRun;
+    state.energy = payload.energy ?? state.energy;
+    state.overloadUntil = payload.overloadUntil ?? state.overloadUntil;
 
     if (Array.isArray(payload.achievements)) {
       payload.achievements.forEach((savedAchievement) => {
@@ -597,6 +710,14 @@ clickButton.addEventListener("click", () => {
   const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
   const finalEarned = addScore(earned);
   state.totalClicks += 1;
+
+  state.energy = Math.min(100, state.energy + 7 + state.combo * 0.8);
+  if (state.energy >= 100) {
+    state.energy = 0;
+    state.overloadUntil = Date.now() + OVERLOAD_DURATION_MS;
+    spawnParticles(24);
+    showToast("Energy overload activated! x2 points");
+  }
 
   spawnFloatingPoints(finalEarned, isCrit);
   spawnParticles(8 + state.combo * 2);
@@ -760,10 +881,18 @@ setInterval(() => {
     state.combo = 1;
     updateUI();
   }
+
+  if (state.overloadUntil && Date.now() > state.overloadUntil) {
+    state.overloadUntil = 0;
+    updateUI();
+  }
+
+  refreshEnergyUI();
 }, 300);
 
 window.addEventListener("resize", resizeCanvas);
 
+hydrateDailyMissions();
 loadGame();
 checkOfflineEarnings();
 displayedScore = state.score;
