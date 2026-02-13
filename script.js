@@ -1107,6 +1107,14 @@ offlineClaimButton.addEventListener("click", () => {
   }, 220);
 });
 
+window.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+}, { passive: false });
+
+window.addEventListener("selectstart", (event) => {
+  event.preventDefault();
+}, { passive: false });
+
 window.addEventListener("beforeunload", () => {
   localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
 });
