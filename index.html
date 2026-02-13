@@ -210,5 +210,41 @@
     </div>
 
     <script src="script.js"></script>
+    <script src="https://yandex.ru/games/sdk/v2"></script>
+    <script>
+      (function () {
+        window.gameLang = window.gameLang || "ru";
+
+        if (!window.YaGames || typeof window.YaGames.init !== "function") {
+          return;
+        }
+
+        try {
+          window.YaGames.init()
+            .then((ysdk) => {
+              window.ysdk = ysdk;
+              const detectedLang = (ysdk && ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang) || "ru";
+              window.gameLang = detectedLang;
+
+              if (window.i18n && window.i18n[detectedLang] && typeof window.applyTranslations === "function") {
+                window.applyTranslations(detectedLang);
+              }
+
+              if (ysdk.features && ysdk.features.LoadingAPI && typeof ysdk.features.LoadingAPI.ready === "function") {
+                ysdk.features.LoadingAPI.ready();
+              }
+
+              console.log(`YSdk initialized, lang = ${window.gameLang}`);
+            })
+            .catch((err) => {
+              console.error("YSdk init error:", err);
+              window.gameLang = "ru";
+            });
+        } catch (error) {
+          console.error(error);
+          window.gameLang = "ru";
+        }
+      })();
+    </script>
   </body>
 </html>

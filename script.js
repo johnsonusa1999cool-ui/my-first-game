@@ -136,10 +136,81 @@ const i18n = {
     tempMultiplier: "к очкам на",
     seconds: "сек",
     permanentClick: "к силе клика навсегда",
+    bought: "Куплено",
+    crit: "КРИТ!",
+    prestigeLabel: "Престиж",
+    prestigeLevel: "Уровень престижа",
+    requirement: "Требование",
+    currentProgress: "Текущий прогресс",
+    rewardValue: "Награда",
+    scoreSuffix: "очков",
+    achievementFirstClick: "Первый клик!",
+    achievementClickFiend: "50 кликов",
+    achievementTapMachine: "500 кликов",
+    achievementHundred: "100 очков",
+    achievementFiveK: "5K очков",
+    achievementFiftyK: "50K очков",
+    achievementUpgradeHunter: "Купить 5 улучшений",
+    achievementUpgradeMaster: "Купить 20 улучшений",
+    achievementFirstAuto: "Автоматизация включена",
+  },
+  en: {
+    score: "Score",
+    perClick: "per click",
+    perSecond: " / sec",
+    combo: "Combo",
+    energy: "Energy",
+    energyOverload: "OVERLOAD",
+    soundOn: "Sound: On",
+    soundOff: "Sound: Off",
+    shop: "Shop",
+    prestigeNeedMore: "Need more points",
+    prestigeAction: "Prestige",
+    reactorStable: "Stable",
+    reactorChargeHint: "Charge the core to overload",
+    reactorOverloadState: "OVERLOAD x2",
+    reactorOverloadTimer: "Overload ends in",
+    missionComplete: "Daily mission completed",
+    overloadActivated: "Energy overload activated! x2 score",
+    awayFor: "Away for",
+    points: "points",
+    unlocked: "Unlocked",
+    claimed: "Claimed",
+    unclaimed: "Unclaimed",
+    reward: "Reward",
+    dailyClicks: "Do 200 clicks",
+    dailyScore: "Reach 15K score",
+    dailyAuto: "Buy 8 auto clickers",
+    achievementUnlocked: "Achievement unlocked",
+    earnMorePrestige: "Earn more points for prestige",
+    prestigeConfirm: "Confirm prestige reset for +{gain} prestige points?",
+    prestigeSuccess: "Prestige +{gain}! Permanent multiplier increased.",
+    bonusCoins: "bonus coins",
+    tempMultiplier: "to score for",
+    seconds: "sec",
+    permanentClick: "to click power permanently",
+    bought: "Bought",
+    crit: "CRIT!",
+    prestigeLabel: "Prestige",
+    prestigeLevel: "Prestige Level",
+    requirement: "Requirement",
+    currentProgress: "Current",
+    rewardValue: "Reward",
+    scoreSuffix: "points",
+    achievementFirstClick: "First click!",
+    achievementClickFiend: "50 clicks",
+    achievementTapMachine: "500 clicks",
+    achievementHundred: "100 score",
+    achievementFiveK: "5K score",
+    achievementFiftyK: "50K score",
+    achievementUpgradeHunter: "Buy 5 upgrades",
+    achievementUpgradeMaster: "Buy 20 upgrades",
+    achievementFirstAuto: "Automation online",
   },
 };
 
-const t = (key) => i18n.ru[key] ?? key;
+const normalizeLocale = (value) => (value && i18n[value] ? value : "ru");
+const t = (key) => i18n[state.locale]?.[key] ?? i18n.ru[key] ?? key;
 
 const logAnalyticsEvent = (name, payload = {}) => {
   try {
@@ -176,8 +247,20 @@ const applyStaticLocale = () => {
 };
 
 const resolveInitialLocale = () => {
-  state.locale = "ru";
+  state.locale = normalizeLocale(window.gameLang);
 };
+
+const applyTranslations = (localeInput) => {
+  const nextLocale = normalizeLocale(typeof localeInput === "string" ? localeInput : window.gameLang);
+  state.locale = nextLocale;
+  window.gameLang = nextLocale;
+  applyStaticLocale();
+  renderAchievements();
+  updateUI();
+};
+
+window.i18n = i18n;
+window.applyTranslations = applyTranslations;
 
 const getAchievementBoostMultiplier = () => (Date.now() < state.achievementBoostUntil ? 1.5 : 1);
 
@@ -192,7 +275,7 @@ const getAchievementRewardDescription = (achievement) => {
 };
 
 const showAchievementRewardPopup = (achievement) => {
-  achievementRewardLabel.textContent = achievement.label;
+  achievementRewardLabel.textContent = t(achievement.labelKey);
   achievementRewardText.textContent = getAchievementRewardDescription(achievement);
   achievementRewardPopup.classList.remove("closing");
   achievementRewardPopup.classList.add("show");
@@ -377,11 +460,11 @@ const getNextPrestigeRequirement = () => {
 
 const updatePrestigeLabel = () => {
   const gain = getPrestigeGain();
-  prestigeLabel.textContent = `Престиж: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
-  prestigeLevelEl.textContent = `Уровень престижа: ${formatNumber(state.prestigePoints)}`;
-  prestigeRequirementEl.textContent = `Требование: ${formatNumber(getNextPrestigeRequirement())} очков`;
-  prestigeCurrentEl.textContent = `Текущий прогресс: ${formatNumber(state.totalEarnedThisRun)}`;
-  prestigeRewardEl.textContent = `Награда: +${(gain * 0.1).toFixed(1)} к множителю`;
+  prestigeLabel.textContent = `${t("prestigeLabel")}: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
+  prestigeLevelEl.textContent = `${t("prestigeLevel")}: ${formatNumber(state.prestigePoints)}`;
+  prestigeRequirementEl.textContent = `${t("requirement")}: ${formatNumber(getNextPrestigeRequirement())} ${t("scoreSuffix")}`;
+  prestigeCurrentEl.textContent = `${t("currentProgress")}: ${formatNumber(state.totalEarnedThisRun)}`;
+  prestigeRewardEl.textContent = `${t("rewardValue")}: +${(gain * 0.1).toFixed(1)}x`;
   openPrestigeButton.disabled = gain <= 0;
   openPrestigeButton.textContent = gain > 0 ? `${t("prestigeAction")} +${gain}` : t("prestigeNeedMore");
 };
@@ -417,15 +500,15 @@ const resetProgressForPrestige = () => {
 
 // Achievement definitions
 const achievements = [
-  { id: "first-click", label: "Первый клик!", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
-  { id: "click-fiend", label: "50 кликов", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
-  { id: "tap-machine", label: "500 кликов", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "hundred", label: "100 очков", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
-  { id: "five-k", label: "5K очков", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
-  { id: "fifty-k", label: "50K очков", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
-  { id: "upgrade-hunter", label: "Купить 5 улучшений", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
-  { id: "upgrade-master", label: "Купить 20 улучшений", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "first-auto", label: "Автоматизация включена", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
+  { id: "first-click", labelKey: "achievementFirstClick", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
+  { id: "click-fiend", labelKey: "achievementClickFiend", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
+  { id: "tap-machine", labelKey: "achievementTapMachine", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "hundred", labelKey: "achievementHundred", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
+  { id: "five-k", labelKey: "achievementFiveK", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
+  { id: "fifty-k", labelKey: "achievementFiftyK", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
+  { id: "upgrade-hunter", labelKey: "achievementUpgradeHunter", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
+  { id: "upgrade-master", labelKey: "achievementUpgradeMaster", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "first-auto", labelKey: "achievementFirstAuto", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
 ];
 
 let audioContext;
@@ -549,7 +632,7 @@ const renderAchievements = () => {
     const progressLabel = achievement.unlocked ? t("unlocked") : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`;
     item.innerHTML = `
       <div class="achievement-main-row">
-        <span>${achievement.label}</span>
+        <span>${t(achievement.labelKey)}</span>
         <span>${progressLabel}</span>
       </div>
       <div class="achievement-reward-row">
@@ -694,12 +777,12 @@ const updateUI = () => {
 
   upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
   upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
-  upgradeClickOwnedEl.textContent = `Куплено: ${state.clickUpgradeOwned}`;
-  upgradeAutoOwnedEl.textContent = `Куплено: ${state.autoUpgradeOwned}`;
+  upgradeClickOwnedEl.textContent = `${t("bought")}: ${state.clickUpgradeOwned}`;
+  upgradeAutoOwnedEl.textContent = `${t("bought")}: ${state.autoUpgradeOwned}`;
   upgradeCritCostEl.textContent = formatNumber(state.critUpgradeCost);
   upgradeSpeedCostEl.textContent = formatNumber(state.speedUpgradeCost);
-  upgradeCritOwnedEl.textContent = `Куплено: ${state.critUpgradeOwned}`;
-  upgradeSpeedOwnedEl.textContent = `Куплено: ${state.speedUpgradeOwned}`;
+  upgradeCritOwnedEl.textContent = `${t("bought")}: ${state.critUpgradeOwned}`;
+  upgradeSpeedOwnedEl.textContent = `${t("bought")}: ${state.speedUpgradeOwned}`;
 
   upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
   upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
@@ -721,7 +804,7 @@ const updateUI = () => {
 const spawnFloatingPoints = (amount, isCrit = false) => {
   const point = document.createElement("span");
   point.className = "floating-point";
-  point.textContent = isCrit ? `+${formatNumber(amount)} CRIT!` : `+${formatNumber(amount)}`;
+  point.textContent = isCrit ? `+${formatNumber(amount)} ${t("crit")}` : `+${formatNumber(amount)}`;
   if (isCrit) {
     point.classList.add("crit");
   }
@@ -747,7 +830,7 @@ const checkAchievements = () => {
     if (progress.current >= progress.target) {
       achievement.unlocked = true;
       playTone(720, 0.2, "triangle");
-      showToast(`${t("achievementUnlocked")}: ${achievement.label}`);
+      showToast(`${t("achievementUnlocked")}: ${t(achievement.labelKey)}`);
       applyAchievementReward(achievement);
     }
   });
