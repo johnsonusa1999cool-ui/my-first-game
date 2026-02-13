@@ -15,6 +15,18 @@ const upgradeCritCostEl = document.querySelector("#upgrade-crit-cost");
 const upgradeSpeedCostEl = document.querySelector("#upgrade-speed-cost");
 const upgradeCritOwnedEl = document.querySelector("#upgrade-crit-owned");
 const upgradeSpeedOwnedEl = document.querySelector("#upgrade-speed-owned");
+const upgradeAutoBoostButton = document.querySelector("#upgrade-auto-boost");
+const upgradeComboButton = document.querySelector("#upgrade-combo");
+const upgradePassiveButton = document.querySelector("#upgrade-passive");
+const upgradeOverloadButton = document.querySelector("#upgrade-overload");
+const upgradeAutoBoostCostEl = document.querySelector("#upgrade-auto-boost-cost");
+const upgradeComboCostEl = document.querySelector("#upgrade-combo-cost");
+const upgradePassiveCostEl = document.querySelector("#upgrade-passive-cost");
+const upgradeOverloadCostEl = document.querySelector("#upgrade-overload-cost");
+const upgradeAutoBoostOwnedEl = document.querySelector("#upgrade-auto-boost-owned");
+const upgradeComboOwnedEl = document.querySelector("#upgrade-combo-owned");
+const upgradePassiveOwnedEl = document.querySelector("#upgrade-passive-owned");
+const upgradeOverloadOwnedEl = document.querySelector("#upgrade-overload-owned");
 const achievementList = document.querySelector("#achievement-list");
 const dailyMissionList = document.querySelector("#daily-mission-list");
 const missionResetEl = document.querySelector("#mission-reset");
@@ -56,6 +68,7 @@ const LAST_PLAYED_KEY = "neon-clicker-last-played";
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 const DAILY_MISSION_KEY = "neon-clicker-daily-missions";
 const OVERLOAD_DURATION_MS = 10000;
+const DAILY_RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ANALYTICS_KEY = "neon-clicker-analytics";
 const MAX_ANALYTICS_EVENTS = 200;
 const GAME_EVENT_KEY = "neon-clicker-game-events";
@@ -76,6 +89,18 @@ const state = {
   critUpgradeOwned: 0,
   speedUpgradeCost: 30,
   speedUpgradeOwned: 0,
+  autoBoostCost: 120,
+  autoBoostOwned: 0,
+  autoBoostMultiplier: 1,
+  comboUpgradeCost: 150,
+  comboUpgradeOwned: 0,
+  comboBonusPower: 1,
+  passiveIncomeCost: 200,
+  passiveIncomeOwned: 0,
+  passiveIncome: 0,
+  overloadUpgradeCost: 260,
+  overloadUpgradeOwned: 0,
+  overloadBonusMultiplier: 0,
   clickBurstDuration: 0.4,
   soundEnabled: true,
   totalClicks: 0,
@@ -97,6 +122,7 @@ let scorePopTimeout;
 let previousScoreLabel = "";
 let dailyMissions = [];
 let lastMissionSignature = "";
+let dailyLastReset = Date.now();
 let lastOfflineReward = 0;
 
 const i18n = {
@@ -115,20 +141,26 @@ const i18n = {
     prestigeAction: "Престиж",
     reactorStable: "Стабильно",
     reactorChargeHint: "Зарядите ядро до перегруза",
-    reactorOverloadState: "ПЕРЕГРУЗ x2",
+    reactorOverloadState: "ПЕРЕГРУЗ x3",
     reactorOverloadTimer: "Перегруз закончится через",
     missionResets: "Сброс",
     missionComplete: "Ежедневное задание выполнено",
-    overloadActivated: "Энергоперегруз активирован! x2 к очкам",
+    missionRewardClaimed: "Награда за задание получена",
+    claimReward: "Получить",
+    missionClaimed: "Получено",
+    overloadActivated: "Энергоперегруз активирован! x3 к очкам",
     awayFor: "Не в игре",
     points: "очков",
     unlocked: "Открыто",
     claimed: "Получено",
     unclaimed: "Не получено",
     reward: "Награда",
-    dailyClicks: "Сделайте 200 кликов",
-    dailyScore: "Наберите 15K очков",
+    dailyClicks: "Сделайте 100 кликов",
+    dailyScore: "Наберите 1K очков",
     dailyAuto: "Купите 8 автокликеров",
+    dailyUpgrade: "Купите 3 улучшения",
+    missionRewardCoins: "монет",
+    missionRewardBoost: "буст",
     achievementUnlocked: "Достижение открыто",
     earnMorePrestige: "Наберите больше очков для престижа",
     prestigeConfirm: "Подтвердите сброс престижа за +{gain} очков престижа?",
@@ -171,20 +203,26 @@ const i18n = {
     prestigeAction: "Prestige",
     reactorStable: "Stable",
     reactorChargeHint: "Charge the core to overload",
-    reactorOverloadState: "OVERLOAD x2",
+    reactorOverloadState: "OVERLOAD x3",
     reactorOverloadTimer: "Overload ends in",
     missionComplete: "Daily mission completed",
-    overloadActivated: "Energy overload activated! x2 score",
+    overloadActivated: "Energy overload activated! x3 score",
     awayFor: "Away for",
     points: "points",
     unlocked: "Unlocked",
     claimed: "Claimed",
     unclaimed: "Unclaimed",
     reward: "Reward",
-    dailyClicks: "Do 200 clicks",
-    dailyScore: "Reach 15K score",
+    dailyClicks: "Do 100 clicks",
+    dailyScore: "Reach 1K score",
     dailyAuto: "Buy 8 auto clickers",
+    dailyUpgrade: "Buy 3 upgrades",
+    missionRewardCoins: "coins",
+    missionRewardBoost: "boost",
     achievementUnlocked: "Achievement unlocked",
+    missionRewardClaimed: "Mission reward claimed",
+    claimReward: "Claim",
+    missionClaimed: "Claimed",
     earnMorePrestige: "Earn more points for prestige",
     prestigeConfirm: "Confirm prestige reset for +{gain} prestige points?",
     prestigeSuccess: "Prestige +{gain}! Permanent multiplier increased.",
@@ -300,71 +338,107 @@ window.applyTranslations = applyTranslations;
 const getAchievementBoostMultiplier = () => (Date.now() < state.achievementBoostUntil ? 1.5 : 1);
 
 const getAchievementRewardDescription = (achievement) => {
-  if (achievement.reward.type === "coins") {
-    return `+${formatNumber(achievement.reward.amount)} ${t("bonusCoins")}`;
+  if (typeof achievement.reward.coins === "number") {
+    return `+${formatNumber(achievement.reward.coins)} ${t("bonusCoins")}`;
   }
-  if (achievement.reward.type === "temp_multiplier") {
-    return `x${achievement.reward.multiplier.toFixed(1)} ${t("tempMultiplier")} ${Math.round(achievement.reward.durationMs / 1000)} ${t("seconds")}`;
+  if (typeof achievement.reward.multiplier === "number") {
+    return `x${achievement.reward.multiplier.toFixed(1)} ${t("tempMultiplier")} ${Math.round(achievement.reward.duration || 12)} ${t("seconds")}`;
   }
-  return `+${formatNumber(achievement.reward.amount)} ${t("permanentClick")}`;
+  return `+${formatNumber(achievement.reward.permBonus || 0)} ${t("permanentClick")}`;
 };
 
 const showAchievementRewardPopup = (achievement) => {
-  achievementRewardLabel.textContent = t(achievement.labelKey);
+  achievementRewardLabel.textContent = `Достижение получено: ${t(achievement.labelKey)}`;
   achievementRewardText.textContent = getAchievementRewardDescription(achievement);
   achievementRewardPopup.classList.remove("closing");
   achievementRewardPopup.classList.add("show");
 };
 
 const applyAchievementReward = (achievement) => {
-  if (achievement.rewardClaimed) {
+  if (achievement.rewarded || achievement.rewardClaimed) {
     return;
   }
 
-  if (achievement.reward.type === "coins") {
-    state.score += achievement.reward.amount;
+  if (typeof achievement.reward.coins === "number") {
+    state.score += achievement.reward.coins;
   }
 
-  if (achievement.reward.type === "temp_multiplier") {
-    state.achievementBoostUntil = Math.max(state.achievementBoostUntil, Date.now() + achievement.reward.durationMs);
+  if (typeof achievement.reward.multiplier === "number") {
+    const durationMs = (achievement.reward.duration || 12) * 1000;
+    state.achievementBoostUntil = Math.max(state.achievementBoostUntil, Date.now() + durationMs);
   }
 
-  if (achievement.reward.type === "permanent_click") {
-    state.pointsPerClick += achievement.reward.amount;
+  if (typeof achievement.reward.permBonus === "number") {
+    state.pointsPerClick += achievement.reward.permBonus;
   }
 
   achievement.rewardClaimed = true;
+  achievement.rewarded = true;
   showAchievementRewardPopup(achievement);
-  logAnalyticsEvent("achievement_reward_claimed", { id: achievement.id, reward: achievement.reward.type });
+  showToast(`Достижение получено: ${t(achievement.labelKey)}. Награда: ${getAchievementRewardDescription(achievement)}`);
+  logAnalyticsEvent("achievement_reward_claimed", { id: achievement.id, reward: achievement.reward });
 };
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
+const createMissionReward = (type, amount) => (type === "coins" ? { coins: amount } : { multiplier: amount, duration: 20 });
+
 const buildDailyMissions = () => ([
-  { id: "mission-clicks", label: t("dailyClicks"), type: "clicks", target: 200, progress: 0, completed: false },
-  { id: "mission-score", label: t("dailyScore"), type: "score", target: 15000, progress: 0, completed: false },
-  { id: "mission-auto", label: t("dailyAuto"), type: "auto", target: 8, progress: 0, completed: false },
+  { id: "mission-clicks", label: t("dailyClicks"), type: "clicks", target: 100, progress: 0, completed: false, claimed: false, reward: createMissionReward("coins", 350) },
+  { id: "mission-score", label: t("dailyScore"), type: "score", target: 1000, progress: 0, completed: false, claimed: false, reward: createMissionReward("coins", 450) },
+  { id: "mission-upgrades", label: t("dailyUpgrade"), type: "upgrades", target: 3, progress: 0, completed: false, claimed: false, reward: createMissionReward("boost", 1.5) },
 ]);
 
-const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 2 : 1);
-
-const getCoreLabel = () => {
-  if (getOverloadMultiplier() > 1) {
-    const secondsLeft = Math.max(0, Math.ceil((state.overloadUntil - Date.now()) / 1000));
-    return { stateLabel: t("reactorOverloadState"), timerLabel: `${t("reactorOverloadTimer")} ${secondsLeft} ${t("seconds")}` };
+const getMissionRewardLabel = (reward) => {
+  if (typeof reward.coins === "number") {
+    return `+${formatNumber(reward.coins)} ${t("missionRewardCoins")}`;
   }
-  return { stateLabel: t("reactorStable"), timerLabel: t("reactorChargeHint") };
+  return `x${reward.multiplier} ${t("missionRewardBoost")} ${reward.duration}${t("seconds")}`;
 };
 
-const refreshEnergyUI = () => {
-  energyFillEl.style.width = `${Math.min(100, state.energy)}%`;
-  energyStatusEl.textContent = getOverloadMultiplier() > 1 ? t("energyOverload") : `${Math.floor(state.energy)}%`;
-  const labels = getCoreLabel();
-  reactorStateEl.textContent = labels.stateLabel;
-  reactorTimerEl.textContent = labels.timerLabel;
+const applyMissionReward = (mission) => {
+  if (!mission.completed || mission.claimed) {
+    return;
+  }
+
+  if (typeof mission.reward.coins === "number") {
+    state.score += mission.reward.coins;
+  }
+
+  if (typeof mission.reward.multiplier === "number") {
+    state.achievementBoostUntil = Math.max(state.achievementBoostUntil, Date.now() + mission.reward.duration * 1000);
+  }
+
+  mission.claimed = true;
+  showToast(`${t("missionRewardClaimed")}: ${mission.label} (${getMissionRewardLabel(mission.reward)})`);
+  saveDailyMissions();
+  updateUI();
+};
+
+const saveDailyMissions = () => {
+  const signature = JSON.stringify(dailyMissions.map((mission) => ({ id: mission.id, progress: mission.progress, completed: mission.completed, claimed: mission.claimed })));
+  if (signature !== lastMissionSignature) {
+    lastMissionSignature = signature;
+    localStorage.setItem(DAILY_MISSION_KEY, JSON.stringify({
+      lastDailyReset: dailyLastReset,
+      missions: dailyMissions,
+    }));
+  }
+};
+
+const ensureDailyMissions = () => {
+  const now = Date.now();
+  if (now - dailyLastReset < DAILY_RESET_INTERVAL_MS && dailyMissions.length === 3) {
+    return;
+  }
+  dailyLastReset = now;
+  dailyMissions = buildDailyMissions();
+  saveDailyMissions();
 };
 
 const updateDailyMissions = () => {
+  ensureDailyMissions();
+
   dailyMissions.forEach((mission) => {
     if (mission.type === "clicks") {
       mission.progress = state.totalClicks;
@@ -372,8 +446,8 @@ const updateDailyMissions = () => {
     if (mission.type === "score") {
       mission.progress = state.totalEarnedThisRun;
     }
-    if (mission.type === "auto") {
-      mission.progress = state.autoClickers;
+    if (mission.type === "upgrades") {
+      mission.progress = getTotalUpgradesBought();
     }
 
     const wasComplete = mission.completed;
@@ -393,29 +467,43 @@ const renderDailyMissions = () => {
     if (mission.completed) {
       li.classList.add("completed");
     }
-    li.innerHTML = `<span>${mission.label}</span><span>${formatNumber(Math.min(mission.progress, mission.target))}/${formatNumber(mission.target)}</span>`;
+
+    const claimDisabled = !(mission.completed && !mission.claimed);
+    li.innerHTML = `
+      <div class="daily-mission-main">
+        <span>${mission.label}</span>
+        <span>${formatNumber(Math.min(mission.progress, mission.target))}/${formatNumber(mission.target)}</span>
+      </div>
+      <div class="daily-mission-footer">
+        <span class="daily-mission-reward">${getMissionRewardLabel(mission.reward)}</span>
+        <button class="daily-claim-button" type="button" data-mission-id="${mission.id}" ${claimDisabled ? "disabled" : ""}>
+          ${mission.claimed ? t("missionClaimed") : t("claimReward")}
+        </button>
+      </div>
+    `;
     dailyMissionList.appendChild(li);
   });
 
-  const signature = JSON.stringify(dailyMissions.map((mission) => ({ id: mission.id, progress: mission.progress, completed: mission.completed })));
-  if (signature !== lastMissionSignature) {
-    lastMissionSignature = signature;
-    localStorage.setItem(DAILY_MISSION_KEY, JSON.stringify({ day: getTodayKey(), missions: dailyMissions }));
-  }
-
-  missionResetEl.textContent = `${t("missionResets")}: ${getTodayKey()}`;
+  saveDailyMissions();
+  const nextResetIn = Math.max(0, DAILY_RESET_INTERVAL_MS - (Date.now() - dailyLastReset));
+  const hours = Math.floor(nextResetIn / (60 * 60 * 1000));
+  const minutes = Math.floor((nextResetIn % (60 * 60 * 1000)) / (60 * 1000));
+  missionResetEl.textContent = `${t("missionResets")}: ${hours}ч ${minutes}м`;
 };
 
 const hydrateDailyMissions = () => {
   const raw = localStorage.getItem(DAILY_MISSION_KEY);
   if (!raw) {
+    dailyLastReset = Date.now();
     dailyMissions = buildDailyMissions();
     return;
   }
 
   try {
     const parsed = JSON.parse(raw);
-    if (parsed.day !== getTodayKey() || !Array.isArray(parsed.missions)) {
+    dailyLastReset = safeNumber(parsed.lastDailyReset, Date.now(), 0);
+
+    if (!Array.isArray(parsed.missions)) {
       dailyMissions = buildDailyMissions();
       return;
     }
@@ -426,11 +514,35 @@ const hydrateDailyMissions = () => {
       if (!saved) {
         return mission;
       }
-      return { ...mission, progress: saved.progress ?? 0, completed: !!saved.completed };
+      return {
+        ...mission,
+        progress: safeNumber(saved.progress, 0, 0),
+        completed: !!saved.completed,
+        claimed: !!saved.claimed,
+      };
     });
   } catch {
+    dailyLastReset = Date.now();
     dailyMissions = buildDailyMissions();
   }
+};
+
+const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 3 + state.overloadBonusMultiplier : 1);
+
+const getCoreLabel = () => {
+  if (getOverloadMultiplier() > 1) {
+    const secondsLeft = Math.max(0, Math.ceil((state.overloadUntil - Date.now()) / 1000));
+    return { stateLabel: t("reactorOverloadState"), timerLabel: `${t("reactorOverloadTimer")} ${secondsLeft} ${t("seconds")}` };
+  }
+  return { stateLabel: t("reactorStable"), timerLabel: t("reactorChargeHint") };
+};
+
+const refreshEnergyUI = () => {
+  energyFillEl.style.width = `${Math.min(100, state.energy)}%`;
+  energyStatusEl.textContent = getOverloadMultiplier() > 1 ? t("energyOverload") : `${Math.floor(state.energy)}%`;
+  const labels = getCoreLabel();
+  reactorStateEl.textContent = labels.stateLabel;
+  reactorTimerEl.textContent = labels.timerLabel;
 };
 
 const formatNumber = (value) => {
@@ -479,6 +591,10 @@ const updateAnimatedScore = () => {
 
 const getPrestigeMultiplier = () => 1 + state.prestigePoints * 0.1;
 
+const getPassivePerSecond = () => state.passiveIncome;
+
+const getAutoPerSecond = () => state.autoClickers * state.pointsPerClick * state.autoBoostMultiplier;
+
 const addScore = (baseAmount) => {
   const boostedAmount = Math.floor(baseAmount * getPrestigeMultiplier() * getOverloadMultiplier() * getAchievementBoostMultiplier());
   state.score += boostedAmount;
@@ -517,6 +633,18 @@ const resetProgressForPrestige = () => {
   state.critUpgradeOwned = 0;
   state.speedUpgradeCost = 30;
   state.speedUpgradeOwned = 0;
+  state.autoBoostCost = 120;
+  state.autoBoostOwned = 0;
+  state.autoBoostMultiplier = 1;
+  state.comboUpgradeCost = 150;
+  state.comboUpgradeOwned = 0;
+  state.comboBonusPower = 1;
+  state.passiveIncomeCost = 200;
+  state.passiveIncomeOwned = 0;
+  state.passiveIncome = 0;
+  state.overloadUpgradeCost = 260;
+  state.overloadUpgradeOwned = 0;
+  state.overloadBonusMultiplier = 0;
   state.clickBurstDuration = 0.4;
   state.totalClicks = 0;
   state.combo = 1;
@@ -526,6 +654,7 @@ const resetProgressForPrestige = () => {
   achievements.forEach((achievement) => {
     achievement.unlocked = false;
     achievement.rewardClaimed = false;
+    achievement.rewarded = false;
   });
 
   renderAchievements();
@@ -535,15 +664,15 @@ const resetProgressForPrestige = () => {
 
 // Achievement definitions
 const achievements = [
-  { id: "first-click", labelKey: "achievementFirstClick", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
-  { id: "click-fiend", labelKey: "achievementClickFiend", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
-  { id: "tap-machine", labelKey: "achievementTapMachine", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "hundred", labelKey: "achievementHundred", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
-  { id: "five-k", labelKey: "achievementFiveK", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
-  { id: "fifty-k", labelKey: "achievementFiftyK", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
-  { id: "upgrade-hunter", labelKey: "achievementUpgradeHunter", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
-  { id: "upgrade-master", labelKey: "achievementUpgradeMaster", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "first-auto", labelKey: "achievementFirstAuto", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
+  { id: "first-click", labelKey: "achievementFirstClick", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, rewarded: false, reward: { coins: 120 } },
+  { id: "click-fiend", labelKey: "achievementClickFiend", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, rewarded: false, reward: { multiplier: 1.5, duration: 12 } },
+  { id: "tap-machine", labelKey: "achievementTapMachine", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, rewarded: false, reward: { permBonus: 1 } },
+  { id: "hundred", labelKey: "achievementHundred", type: "score", target: 100, unlocked: false, rewardClaimed: false, rewarded: false, reward: { coins: 180 } },
+  { id: "five-k", labelKey: "achievementFiveK", type: "score", target: 5000, unlocked: false, rewardClaimed: false, rewarded: false, reward: { multiplier: 1.5, duration: 15 } },
+  { id: "fifty-k", labelKey: "achievementFiftyK", type: "score", target: 50000, unlocked: false, rewardClaimed: false, rewarded: false, reward: { permBonus: 2 } },
+  { id: "upgrade-hunter", labelKey: "achievementUpgradeHunter", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, rewarded: false, reward: { coins: 260 } },
+  { id: "upgrade-master", labelKey: "achievementUpgradeMaster", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, rewarded: false, reward: { permBonus: 1 } },
+  { id: "first-auto", labelKey: "achievementFirstAuto", type: "auto", target: 1, unlocked: false, rewardClaimed: false, rewarded: false, reward: { coins: 220 } },
 ];
 
 let audioContext;
@@ -636,7 +765,11 @@ const getTotalUpgradesBought = () =>
   state.clickUpgradeOwned +
   state.autoUpgradeOwned +
   state.critUpgradeOwned +
-  state.speedUpgradeOwned;
+  state.speedUpgradeOwned +
+  state.autoBoostOwned +
+  state.comboUpgradeOwned +
+  state.passiveIncomeOwned +
+  state.overloadUpgradeOwned;
 
 const getAchievementProgress = (achievement) => {
   if (achievement.type === "clicks") {
@@ -672,7 +805,7 @@ const renderAchievements = () => {
       </div>
       <div class="achievement-reward-row">
         <span class="achievement-reward-text">${t("reward")}: ${getAchievementRewardDescription(achievement)}</span>
-        <span class="achievement-claim-state ${achievement.rewardClaimed ? "claimed" : "unclaimed"}">${achievement.rewardClaimed ? t("claimed") : t("unclaimed")}</span>
+        <span class="achievement-claim-state ${(achievement.rewarded || achievement.rewardClaimed) ? "claimed" : "unclaimed"}">${(achievement.rewarded || achievement.rewardClaimed) ? t("claimed") : t("unclaimed")}</span>
       </div>
     `;
     achievementList.appendChild(item);
@@ -747,7 +880,7 @@ const checkOfflineEarnings = () => {
 
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - lastPlayed) / 1000));
   const effectiveSeconds = Math.min(elapsedSeconds, MAX_OFFLINE_SECONDS);
-  const passivePerSecond = state.autoClickers * state.pointsPerClick;
+  const passivePerSecond = getAutoPerSecond() + getPassivePerSecond();
   const offlineEarned = Math.floor(effectiveSeconds * passivePerSecond);
 
   if (offlineEarned > 0) {
@@ -809,7 +942,7 @@ const triggerClickBurst = () => {
 // Update UI when state changes
 const updateUI = () => {
   perClickEl.textContent = `+${formatNumber(state.pointsPerClick)} ${t("perClick")}`;
-  perSecondEl.textContent = `${formatNumber(state.autoClickers * state.pointsPerClick)}${t("perSecond")}`;
+  perSecondEl.textContent = `${formatNumber(getAutoPerSecond() + getPassivePerSecond())}${t("perSecond")}`;
 
   upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
   upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
@@ -819,16 +952,28 @@ const updateUI = () => {
   upgradeSpeedCostEl.textContent = formatNumber(state.speedUpgradeCost);
   upgradeCritOwnedEl.textContent = `${t("bought")}: ${state.critUpgradeOwned}`;
   upgradeSpeedOwnedEl.textContent = `${t("bought")}: ${state.speedUpgradeOwned}`;
+  upgradeAutoBoostCostEl.textContent = formatNumber(state.autoBoostCost);
+  upgradeComboCostEl.textContent = formatNumber(state.comboUpgradeCost);
+  upgradePassiveCostEl.textContent = formatNumber(state.passiveIncomeCost);
+  upgradeOverloadCostEl.textContent = formatNumber(state.overloadUpgradeCost);
+  upgradeAutoBoostOwnedEl.textContent = `${t("bought")}: ${state.autoBoostOwned}`;
+  upgradeComboOwnedEl.textContent = `${t("bought")}: ${state.comboUpgradeOwned}`;
+  upgradePassiveOwnedEl.textContent = `${t("bought")}: ${state.passiveIncomeOwned}`;
+  upgradeOverloadOwnedEl.textContent = `${t("bought")}: ${state.overloadUpgradeOwned}`;
 
   upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
   upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
   upgradeCritButton.disabled = state.score < state.critUpgradeCost;
   upgradeSpeedButton.disabled = state.score < state.speedUpgradeCost;
+  upgradeAutoBoostButton.disabled = state.score < state.autoBoostCost;
+  upgradeComboButton.disabled = state.score < state.comboUpgradeCost;
+  upgradePassiveButton.disabled = state.score < state.passiveIncomeCost;
+  upgradeOverloadButton.disabled = state.score < state.overloadUpgradeCost;
   updateSoundLabel();
   updateShopState();
 
   comboLabel.textContent = `${t("combo")} x${state.combo}`;
-  comboFill.style.width = `${Math.min(100, state.combo * 20)}%`;
+  comboFill.style.width = `${Math.min(100, state.combo * (16 + state.comboBonusPower * 4))}%`;
   clickButton.style.setProperty("--burst-duration", `${state.clickBurstDuration}s`);
   updatePrestigeLabel();
   refreshEnergyUI();
@@ -890,6 +1035,18 @@ const saveGame = () => {
     critUpgradeOwned: state.critUpgradeOwned,
     speedUpgradeCost: state.speedUpgradeCost,
     speedUpgradeOwned: state.speedUpgradeOwned,
+    autoBoostCost: state.autoBoostCost,
+    autoBoostOwned: state.autoBoostOwned,
+    autoBoostMultiplier: state.autoBoostMultiplier,
+    comboUpgradeCost: state.comboUpgradeCost,
+    comboUpgradeOwned: state.comboUpgradeOwned,
+    comboBonusPower: state.comboBonusPower,
+    passiveIncomeCost: state.passiveIncomeCost,
+    passiveIncomeOwned: state.passiveIncomeOwned,
+    passiveIncome: state.passiveIncome,
+    overloadUpgradeCost: state.overloadUpgradeCost,
+    overloadUpgradeOwned: state.overloadUpgradeOwned,
+    overloadBonusMultiplier: state.overloadBonusMultiplier,
     clickBurstDuration: state.clickBurstDuration,
     achievements,
     soundEnabled: state.soundEnabled,
@@ -935,6 +1092,18 @@ const loadGame = () => {
     state.critUpgradeOwned = safeNumber(payload.critUpgradeOwned, state.critUpgradeOwned, 0);
     state.speedUpgradeCost = safeNumber(payload.speedUpgradeCost, state.speedUpgradeCost, 1);
     state.speedUpgradeOwned = safeNumber(payload.speedUpgradeOwned, state.speedUpgradeOwned, 0);
+    state.autoBoostCost = safeNumber(payload.autoBoostCost, state.autoBoostCost, 1);
+    state.autoBoostOwned = safeNumber(payload.autoBoostOwned, state.autoBoostOwned, 0);
+    state.autoBoostMultiplier = safeNumber(payload.autoBoostMultiplier, state.autoBoostMultiplier, 1, 10);
+    state.comboUpgradeCost = safeNumber(payload.comboUpgradeCost, state.comboUpgradeCost, 1);
+    state.comboUpgradeOwned = safeNumber(payload.comboUpgradeOwned, state.comboUpgradeOwned, 0);
+    state.comboBonusPower = safeNumber(payload.comboBonusPower, state.comboBonusPower, 1, 20);
+    state.passiveIncomeCost = safeNumber(payload.passiveIncomeCost, state.passiveIncomeCost, 1);
+    state.passiveIncomeOwned = safeNumber(payload.passiveIncomeOwned, state.passiveIncomeOwned, 0);
+    state.passiveIncome = safeNumber(payload.passiveIncome, state.passiveIncome, 0, 5000);
+    state.overloadUpgradeCost = safeNumber(payload.overloadUpgradeCost, state.overloadUpgradeCost, 1);
+    state.overloadUpgradeOwned = safeNumber(payload.overloadUpgradeOwned, state.overloadUpgradeOwned, 0);
+    state.overloadBonusMultiplier = safeNumber(payload.overloadBonusMultiplier, state.overloadBonusMultiplier, 0, 5);
     state.clickBurstDuration = safeNumber(payload.clickBurstDuration, state.clickBurstDuration, 0.1, 1);
     state.soundEnabled = payload.soundEnabled ?? state.soundEnabled;
     state.totalClicks = safeNumber(payload.totalClicks, state.totalClicks, 0);
@@ -954,6 +1123,7 @@ const loadGame = () => {
         if (match) {
           match.unlocked = savedAchievement.unlocked;
           match.rewardClaimed = savedAchievement.rewardClaimed ?? (savedAchievement.unlocked ? true : false);
+          match.rewarded = savedAchievement.rewarded ?? match.rewardClaimed;
         }
       });
     }
@@ -972,7 +1142,7 @@ clickButton.addEventListener("click", () => {
   }
   state.lastClickAt = now;
 
-  const comboBonus = state.combo >= 3 ? 1 : 0;
+  const comboBonus = state.combo >= 3 ? state.comboBonusPower : 0;
   const isCrit = Math.random() < state.critChance;
   const critMultiplier = isCrit ? 2 : 1;
   const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
@@ -1080,6 +1250,80 @@ upgradeSpeedButton.addEventListener("click", () => {
   saveGame();
 });
 
+upgradeAutoBoostButton.addEventListener("click", () => {
+  if (state.score < state.autoBoostCost) {
+    return;
+  }
+
+  state.score -= state.autoBoostCost;
+  state.autoBoostOwned += 1;
+  state.autoBoostMultiplier += 0.12;
+  state.autoBoostCost = Math.floor(state.autoBoostCost * 1.15);
+  animatePurchase(upgradeAutoBoostButton);
+  sendGameEvent("upgrade_buy", { type: "auto_boost", level: state.autoBoostOwned });
+  updateUI();
+  saveGame();
+});
+
+upgradeComboButton.addEventListener("click", () => {
+  if (state.score < state.comboUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.comboUpgradeCost;
+  state.comboUpgradeOwned += 1;
+  state.comboBonusPower += 0.35;
+  state.comboUpgradeCost = Math.floor(state.comboUpgradeCost * 1.15);
+  animatePurchase(upgradeComboButton);
+  sendGameEvent("upgrade_buy", { type: "combo", level: state.comboUpgradeOwned });
+  updateUI();
+  saveGame();
+});
+
+upgradePassiveButton.addEventListener("click", () => {
+  if (state.score < state.passiveIncomeCost) {
+    return;
+  }
+
+  state.score -= state.passiveIncomeCost;
+  state.passiveIncomeOwned += 1;
+  state.passiveIncome += 2;
+  state.passiveIncomeCost = Math.floor(state.passiveIncomeCost * 1.15);
+  animatePurchase(upgradePassiveButton);
+  sendGameEvent("upgrade_buy", { type: "passive", level: state.passiveIncomeOwned });
+  updateUI();
+  saveGame();
+});
+
+upgradeOverloadButton.addEventListener("click", () => {
+  if (state.score < state.overloadUpgradeCost) {
+    return;
+  }
+
+  state.score -= state.overloadUpgradeCost;
+  state.overloadUpgradeOwned += 1;
+  state.overloadBonusMultiplier += 0.2;
+  state.overloadUpgradeCost = Math.floor(state.overloadUpgradeCost * 1.15);
+  animatePurchase(upgradeOverloadButton);
+  sendGameEvent("upgrade_buy", { type: "overload", level: state.overloadUpgradeOwned });
+  updateUI();
+  saveGame();
+});
+
+dailyMissionList.addEventListener("click", (event) => {
+  const button = event.target.closest(".daily-claim-button");
+  if (!button) {
+    return;
+  }
+
+  const mission = dailyMissions.find((item) => item.id === button.dataset.missionId);
+  if (!mission) {
+    return;
+  }
+
+  applyMissionReward(mission);
+});
+
 toggleSoundButton.addEventListener("click", () => {
   state.soundEnabled = !state.soundEnabled;
   updateSoundLabel();
@@ -1172,7 +1416,7 @@ setInterval(() => {
     return;
   }
 
-  addScore(state.autoClickers * state.pointsPerClick);
+  addScore(getAutoPerSecond() + getPassivePerSecond());
   spawnParticles(4 + state.autoClickers);
   updateUI();
   checkAchievements();

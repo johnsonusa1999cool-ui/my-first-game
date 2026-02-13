@@ -784,9 +784,8 @@ body {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(46, 252, 255, 0.15);
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  gap: 6px;
   font-size: 0.86rem;
 }
 
@@ -794,6 +793,39 @@ body {
   border-color: rgba(68, 229, 178, 0.55);
   color: var(--success);
   box-shadow: inset 0 0 12px rgba(68, 229, 178, 0.16);
+}
+
+.daily-mission-main {
+  display: grid;
+  gap: 6px;
+}
+
+.daily-mission-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  gap: 10px;
+}
+
+.daily-mission-reward {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.daily-claim-button {
+  border: 1px solid rgba(46, 252, 255, 0.35);
+  background: rgba(46, 252, 255, 0.08);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.daily-claim-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .floating-points {
