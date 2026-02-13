@@ -2,7 +2,7 @@
   "name": "neon-clicker",
   "version": "1.0.0",
   "private": true,
-  "description": "Neon Clicker browser game",
+  "description": "Неоновый кликер — браузерная игра",
   "scripts": {
     "start": "node server.js",
     "preview": "node server.js"

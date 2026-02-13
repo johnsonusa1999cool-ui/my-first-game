@@ -1,28 +1,33 @@
-# Neon Clicker
+# Неоновый кликер
 
-A fast, neon-themed clicker game built with vanilla HTML, CSS, and JavaScript.
+**Неоновый кликер** — динамичная браузерная idle-игра на чистых HTML, CSS и JavaScript.
 
-## Live preview (local)
+## Локальный запуск
 
-### Option 1: Node server (recommended)
+### Вариант 1: Node.js сервер (рекомендуется)
 
 ```bash
 npm install
 npm run preview
 ```
 
-Open `http://localhost:8000` in your browser.
+Откройте `http://localhost:8000` в браузере.
 
-### Option 2: Python server
+### Вариант 2: Python сервер
 
 ```bash
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000` in your browser.
+Откройте `http://localhost:8000` в браузере.
 
-## Play the game
+## Игровой цикл
 
-- Click the main button to earn points.
-- Buy upgrades to increase points per click or enable auto-clicking.
-- Unlock achievements and keep your progress with local saves.
+- Нажимайте на главное ядро, чтобы получать очки.
+- Покупайте улучшения для усиления кликов и автоматизации.
+- Открывайте достижения и сохраняйте прогресс локально.
+
+## Промо-материалы и соответствие названия
+
+- В репозитории не обнаружены растровые промо-изображения с текстом (PNG/JPG/WebP) для замены названия.
+- Если такие материалы будут добавлены позже, название в них должно быть строго: **Неоновый кликер**.

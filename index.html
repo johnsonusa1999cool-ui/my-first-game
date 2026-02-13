@@ -1,34 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Neon Clicker</title>
+    <title>Неоновый кликер</title>
+    <meta name="description" content="Неоновый кликер — динамичная браузерная idle-игра: кликай, улучшай ядро и развивай автоматизацию." />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="app">
       <header class="header">
         <div>
-          <p class="eyebrow">Neon Clicker</p>
-          <h1>Tap. Upgrade. Automate.</h1>
-          <p class="subhead">Earn points, unlock achievements, and let the clicks roll in.</p>
+          <p class="eyebrow">Неоновый кликер</p>
+          <h1>Кликай. Улучшай. Автоматизируй.</h1>
+          <p class="subhead">Зарабатывай очки, открывай достижения и ускоряй рост ядра.</p>
         </div>
         <div class="score-card" aria-live="polite">
-          <span class="label">Score</span>
+          <span class="label">Очки</span>
           <span id="score" class="value">0</span>
-          <span class="per-click" id="per-click">+1 per click</span>
-          <span class="per-second" id="per-second">0 / sec</span>
-          <span class="prestige-label" id="prestige-label">Prestige: 0 (x1.0)</span>
+          <span class="per-click" id="per-click">+1 за клик</span>
+          <span class="per-second" id="per-second">0 / сек</span>
+          <span class="prestige-label" id="prestige-label">Престиж: 0 (x1.0)</span>
           <div class="combo">
-            <span id="combo-label">Combo x1</span>
+            <span id="combo-label">Комбо x1</span>
             <div class="combo-bar">
               <span id="combo-fill"></span>
             </div>
           </div>
           <div class="energy-panel">
             <div class="energy-header">
-              <span>Energy</span>
+              <span>Энергия</span>
               <span id="energy-status">0%</span>
             </div>
             <div class="energy-bar">
@@ -36,18 +37,17 @@
             </div>
           </div>
           <div class="score-actions">
-            <button id="toggle-sound" class="ghost-button" type="button">Sound: On</button>
-            <button id="reset-save" class="ghost-button" type="button">Reset Save</button>
-            <button id="toggle-shop" class="ghost-button" type="button">Shop</button>
-            <button id="toggle-locale" class="ghost-button" type="button">Language: EN</button>
+            <button id="toggle-sound" class="ghost-button" type="button">Звук: Вкл</button>
+            <button id="reset-save" class="ghost-button" type="button">Сбросить сохранение</button>
+            <button id="toggle-shop" class="ghost-button" type="button">Магазин</button>
           </div>
 
           <div class="prestige-panel">
-            <p id="prestige-level" class="prestige-stat">Prestige Level: 0</p>
-            <p id="prestige-requirement" class="prestige-stat">Requirement: 50K points</p>
-            <p id="prestige-current" class="prestige-stat">Current: 0</p>
-            <p id="prestige-reward" class="prestige-stat">Reward: +0.0 multiplier</p>
-            <button id="open-prestige" class="ghost-button" type="button">Need more points</button>
+            <p id="prestige-level" class="prestige-stat">Уровень престижа: 0</p>
+            <p id="prestige-requirement" class="prestige-stat">Требование: 50K очков</p>
+            <p id="prestige-current" class="prestige-stat">Текущий прогресс: 0</p>
+            <p id="prestige-reward" class="prestige-stat">Награда: +0.0 к множителю</p>
+            <button id="open-prestige" class="ghost-button" type="button">Нужно больше очков</button>
           </div>
         </div>
       </header>
@@ -61,7 +61,7 @@
                   <span class="ring ring-outer"></span>
                   <span class="ring ring-inner"></span>
                 </div>
-                <button id="click-button" class="click-button" aria-label="Tap to gain points">
+                <button id="click-button" class="click-button" aria-label="Нажмите, чтобы получить очки">
                   <span class="cube-glow" aria-hidden="true"></span>
                   <span class="cube" aria-hidden="true">
                     <span class="cube-face cube-front"></span>
@@ -69,43 +69,43 @@
                     <span class="cube-face cube-side"></span>
                     <span class="cube-core"></span>
                   </span>
-                  <span class="cube-text">ENERGY CORE</span>
+                  <span class="cube-text">ЭНЕРГОЯДРО</span>
                 </button>
                 <canvas id="particle-canvas" class="particle-canvas"></canvas>
                 <div class="floating-points" id="floating-points"></div>
               </div>
               <div class="reactor-status" aria-live="polite">
-                <span class="reactor-label">Core Mode</span>
-                <span id="reactor-state" class="reactor-value">Stable</span>
-                <span id="reactor-boost-timer" class="reactor-timer">Charge the core to overload</span>
+                <span class="reactor-label">Режим ядра</span>
+                <span id="reactor-state" class="reactor-value">Стабильно</span>
+                <span id="reactor-boost-timer" class="reactor-timer">Зарядите ядро до перегруза</span>
               </div>
-              <p class="hint">Keep clicking to unlock achievements and upgrades.</p>
+              <p class="hint">Продолжайте кликать, чтобы открывать достижения и улучшения.</p>
             </section>
           </div>
 
           <div class="center-panel">
-            <section class="achievements" aria-label="Achievements">
-              <h2>Achievements</h2>
+            <section class="achievements" aria-label="Достижения">
+              <h2>Достижения</h2>
               <ul id="achievement-list" class="achievement-list"></ul>
             </section>
-            <section class="daily-missions" aria-label="Daily Missions">
+            <section class="daily-missions" aria-label="Ежедневные задания">
               <div class="daily-header">
-                <h2>Daily Missions</h2>
-                <span id="mission-reset" class="daily-reset">Resets daily</span>
+                <h2>Ежедневные задания</h2>
+                <span id="mission-reset" class="daily-reset">Сброс ежедневно</span>
               </div>
               <ul id="daily-mission-list" class="daily-mission-list"></ul>
             </section>
           </div>
 
           <div class="shop-panel" id="shop-panel">
-            <section class="shop" aria-label="Upgrades shop">
+            <section class="shop" aria-label="Магазин улучшений">
               <div class="shop-header">
                 <div>
-                  <h2>Upgrade Shop</h2>
-                  <p>Boost your clicks and automate your score.</p>
+                  <h2>Магазин улучшений</h2>
+                  <p>Усиливайте клики и автоматизируйте набор очков.</p>
                 </div>
                 <div class="wallet">
-                  <span class="wallet-label">Coins</span>
+                  <span class="wallet-label">Монеты</span>
                   <span id="wallet" class="wallet-value">0</span>
                 </div>
               </div>
@@ -113,61 +113,61 @@
                 <article class="upgrade-card">
                   <div class="upgrade-info">
                     <div>
-                      <h3>Power Finger</h3>
-                      <p>Increase points per click.</p>
+                      <h3>Сила клика</h3>
+                      <p>Увеличивает очки за клик.</p>
                     </div>
                     <div class="upgrade-meta">
-                      <span id="upgrade-click-owned">Owned: 0</span>
-                      <span class="upgrade-tier">Tier 1</span>
+                      <span id="upgrade-click-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
                     </div>
                   </div>
                   <button id="upgrade-click" class="upgrade-button" type="button">
-                    Buy <span id="upgrade-click-cost">10</span>
+                    Купить <span id="upgrade-click-cost">10</span>
                   </button>
                 </article>
                 <article class="upgrade-card">
                   <div class="upgrade-info">
                     <div>
-                      <h3>Auto Clicker</h3>
-                      <p>Earn points every second.</p>
+                      <h3>Автокликер</h3>
+                      <p>Даёт очки каждую секунду.</p>
                     </div>
                     <div class="upgrade-meta">
-                      <span id="upgrade-auto-owned">Owned: 0</span>
-                      <span class="upgrade-tier">Tier 1</span>
+                      <span id="upgrade-auto-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
                     </div>
                   </div>
                   <button id="upgrade-auto" class="upgrade-button" type="button">
-                    Buy <span id="upgrade-auto-cost">25</span>
+                    Купить <span id="upgrade-auto-cost">25</span>
                   </button>
                 </article>
                 <article class="upgrade-card">
                   <div class="upgrade-info">
                     <div>
-                      <h3>Critical Spark</h3>
-                      <p>Chance to double click power.</p>
+                      <h3>Критический заряд</h3>
+                      <p>Шанс удвоить силу клика.</p>
                     </div>
                     <div class="upgrade-meta">
-                      <span id="upgrade-crit-owned">Owned: 0</span>
-                      <span class="upgrade-tier">Tier 1</span>
+                      <span id="upgrade-crit-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
                     </div>
                   </div>
                   <button id="upgrade-crit" class="upgrade-button" type="button">
-                    Buy <span id="upgrade-crit-cost">40</span>
+                    Купить <span id="upgrade-crit-cost">40</span>
                   </button>
                 </article>
                 <article class="upgrade-card">
                   <div class="upgrade-info">
                     <div>
-                      <h3>Speed Core</h3>
-                      <p>Faster click burst animation.</p>
+                      <h3>Ядро скорости</h3>
+                      <p>Ускоряет анимацию всплеска клика.</p>
                     </div>
                     <div class="upgrade-meta">
-                      <span id="upgrade-speed-owned">Owned: 0</span>
-                      <span class="upgrade-tier">Tier 1</span>
+                      <span id="upgrade-speed-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
                     </div>
                   </div>
                   <button id="upgrade-speed" class="upgrade-button" type="button">
-                    Buy <span id="upgrade-speed-cost">30</span>
+                    Купить <span id="upgrade-speed-cost">30</span>
                   </button>
                 </article>
               </div>
@@ -181,31 +181,31 @@
 
     <div id="offline-popup" class="offline-popup" aria-live="polite">
       <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Offline rewards">
-        <p class="offline-title"><span class="offline-badge">⚡</span> Welcome back, Operator</p>
-        <p class="offline-subtitle">Reactor generated offline energy</p>
+        <p class="offline-title"><span class="offline-badge">⚡</span> С возвращением, оператор</p>
+        <p class="offline-subtitle">Реактор накопил энергию офлайн</p>
         <p id="offline-earned" class="offline-earned">0</p>
         <p id="offline-time" class="offline-time"></p>
-        <button id="offline-claim" class="ghost-button" type="button">CLAIM REWARD</button>
+        <button id="offline-claim" class="ghost-button" type="button">Получить награду</button>
       </div>
     </div>
 
     <div id="prestige-popup" class="offline-popup" aria-live="polite">
       <div class="offline-popup-content">
-        <p class="offline-title">Ascend?</p>
-        <p id="prestige-message">Are you sure? This will reset your progress.</p>
+        <p class="offline-title">Престиж?</p>
+        <p id="prestige-message">Вы уверены? Это сбросит ваш прогресс.</p>
         <div class="prestige-actions">
-          <button id="prestige-cancel" class="ghost-button" type="button">CANCEL</button>
-          <button id="prestige-confirm" class="ghost-button" type="button">CONFIRM</button>
+          <button id="prestige-cancel" class="ghost-button" type="button">Отмена</button>
+          <button id="prestige-confirm" class="ghost-button" type="button">Подтвердить</button>
         </div>
       </div>
     </div>
 
     <div id="achievement-reward-popup" class="offline-popup" aria-live="polite">
-      <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Achievement reward">
-        <p class="offline-title">Achievement Reward</p>
+      <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Награда за достижение">
+        <p class="offline-title">Награда за достижение</p>
         <p id="achievement-reward-label" class="offline-subtitle"></p>
         <p id="achievement-reward-text" class="offline-earned"></p>
-        <button id="achievement-reward-close" class="ghost-button" type="button">CLAIM</button>
+        <button id="achievement-reward-close" class="ghost-button" type="button">Получить</button>
       </div>
     </div>
 

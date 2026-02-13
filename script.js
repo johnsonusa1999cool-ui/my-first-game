@@ -21,7 +21,6 @@ const missionResetEl = document.querySelector("#mission-reset");
 const toggleSoundButton = document.querySelector("#toggle-sound");
 const resetSaveButton = document.querySelector("#reset-save");
 const toggleShopButton = document.querySelector("#toggle-shop");
-const toggleLocaleButton = document.querySelector("#toggle-locale");
 const walletEl = document.querySelector("#wallet");
 const particleCanvas = document.querySelector("#particle-canvas");
 const comboLabel = document.querySelector("#combo-label");
@@ -57,7 +56,6 @@ const LAST_PLAYED_KEY = "neon-clicker-last-played";
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 const DAILY_MISSION_KEY = "neon-clicker-daily-missions";
 const OVERLOAD_DURATION_MS = 10000;
-const LOCALE_KEY = "neon-clicker-locale";
 const ANALYTICS_KEY = "neon-clicker-analytics";
 const MAX_ANALYTICS_EVENTS = 200;
 const MAX_PARTICLES = 240;
@@ -87,7 +85,7 @@ const state = {
   totalEarnedThisRun: 0,
   energy: 0,
   overloadUntil: 0,
-  locale: "en",
+  locale: "ru",
   achievementBoostUntil: 0,
 };
 
@@ -99,29 +97,6 @@ let dailyMissions = [];
 let lastMissionSignature = "";
 
 const i18n = {
-  en: {
-    score: "Score",
-    perClick: "per click",
-    perSecond: " / sec",
-    combo: "Combo",
-    energy: "Energy",
-    energyOverload: "OVERLOAD",
-    soundOn: "Sound: On",
-    soundOff: "Sound: Off",
-    shop: "Shop",
-    language: "Language",
-    prestigeNeedMore: "Need more points",
-    prestigeAction: "Prestige",
-    reactorStable: "Stable",
-    reactorChargeHint: "Charge the core to overload",
-    reactorOverloadState: "OVERLOAD x2",
-    reactorOverloadTimer: "Overload ends in",
-    missionResets: "Resets",
-    missionComplete: "Daily complete",
-    overloadActivated: "Energy overload activated! x2 points",
-    awayFor: "Away for",
-    points: "points",
-  },
   ru: {
     score: "Очки",
     perClick: "за клик",
@@ -136,18 +111,35 @@ const i18n = {
     prestigeNeedMore: "Нужно больше очков",
     prestigeAction: "Престиж",
     reactorStable: "Стабильно",
-    reactorChargeHint: "Зарядите ядро для перегруза",
+    reactorChargeHint: "Зарядите ядро до перегруза",
     reactorOverloadState: "ПЕРЕГРУЗ x2",
     reactorOverloadTimer: "Перегруз закончится через",
     missionResets: "Сброс",
-    missionComplete: "Ежедневка выполнена",
-    overloadActivated: "Энергоперегруз активирован! x2 очки",
+    missionComplete: "Ежедневное задание выполнено",
+    overloadActivated: "Энергоперегруз активирован! x2 к очкам",
     awayFor: "Не в игре",
     points: "очков",
+    unlocked: "Открыто",
+    claimed: "Получено",
+    unclaimed: "Не получено",
+    reward: "Награда",
+    dailyClicks: "Сделайте 200 кликов",
+    dailyScore: "Наберите 15K очков",
+    dailyAuto: "Купите 8 автокликеров",
+    achievementUnlocked: "Достижение открыто",
+    earnMorePrestige: "Наберите больше очков для престижа",
+    prestigeConfirm: "Подтвердите сброс престижа за +{gain} очков престижа?",
+    prestigeSuccess: "Престиж +{gain}! Постоянный множитель увеличен.",
+    offlinePointsSuffix: "очков",
+    dailyResetLabel: "Сброс",
+    bonusCoins: "бонусных монет",
+    tempMultiplier: "к очкам на",
+    seconds: "сек",
+    permanentClick: "к силе клика навсегда",
   },
 };
 
-const t = (key) => i18n[state.locale]?.[key] ?? i18n.en[key] ?? key;
+const t = (key) => i18n.ru[key] ?? key;
 
 const logAnalyticsEvent = (name, payload = {}) => {
   try {
@@ -180,29 +172,23 @@ const applyStaticLocale = () => {
     labelEl.textContent = t('score');
   }
   toggleShopButton.textContent = t('shop');
-  toggleLocaleButton.textContent = `${t('language')}: ${state.locale.toUpperCase()}`;
   document.querySelector('.energy-header span').textContent = t('energy');
 };
 
 const resolveInitialLocale = () => {
-  const stored = localStorage.getItem(LOCALE_KEY);
-  if (stored === 'ru' || stored === 'en') {
-    state.locale = stored;
-    return;
-  }
-  state.locale = navigator.language && navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+  state.locale = "ru";
 };
 
 const getAchievementBoostMultiplier = () => (Date.now() < state.achievementBoostUntil ? 1.5 : 1);
 
 const getAchievementRewardDescription = (achievement) => {
   if (achievement.reward.type === "coins") {
-    return `+${formatNumber(achievement.reward.amount)} bonus coins`;
+    return `+${formatNumber(achievement.reward.amount)} ${t("bonusCoins")}`;
   }
   if (achievement.reward.type === "temp_multiplier") {
-    return `x${achievement.reward.multiplier.toFixed(1)} score for ${Math.round(achievement.reward.durationMs / 1000)}s`;
+    return `x${achievement.reward.multiplier.toFixed(1)} ${t("tempMultiplier")} ${Math.round(achievement.reward.durationMs / 1000)} ${t("seconds")}`;
   }
-  return `+${formatNumber(achievement.reward.amount)} permanent click power`;
+  return `+${formatNumber(achievement.reward.amount)} ${t("permanentClick")}`;
 };
 
 const showAchievementRewardPopup = (achievement) => {
@@ -237,9 +223,9 @@ const applyAchievementReward = (achievement) => {
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
 const buildDailyMissions = () => ([
-  { id: "mission-clicks", label: "Perform 200 clicks", type: "clicks", target: 200, progress: 0, completed: false },
-  { id: "mission-score", label: "Reach 15K score", type: "score", target: 15000, progress: 0, completed: false },
-  { id: "mission-auto", label: "Own 8 auto clickers", type: "auto", target: 8, progress: 0, completed: false },
+  { id: "mission-clicks", label: t("dailyClicks"), type: "clicks", target: 200, progress: 0, completed: false },
+  { id: "mission-score", label: t("dailyScore"), type: "score", target: 15000, progress: 0, completed: false },
+  { id: "mission-auto", label: t("dailyAuto"), type: "auto", target: 8, progress: 0, completed: false },
 ]);
 
 const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 2 : 1);
@@ -247,7 +233,7 @@ const getOverloadMultiplier = () => (Date.now() < state.overloadUntil ? 2 : 1);
 const getCoreLabel = () => {
   if (getOverloadMultiplier() > 1) {
     const secondsLeft = Math.max(0, Math.ceil((state.overloadUntil - Date.now()) / 1000));
-    return { stateLabel: t("reactorOverloadState"), timerLabel: `${t("reactorOverloadTimer")} ${secondsLeft}s` };
+    return { stateLabel: t("reactorOverloadState"), timerLabel: `${t("reactorOverloadTimer")} ${secondsLeft} ${t("seconds")}` };
   }
   return { stateLabel: t("reactorStable"), timerLabel: t("reactorChargeHint") };
 };
@@ -391,11 +377,11 @@ const getNextPrestigeRequirement = () => {
 
 const updatePrestigeLabel = () => {
   const gain = getPrestigeGain();
-  prestigeLabel.textContent = `Prestige: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
-  prestigeLevelEl.textContent = `Prestige Level: ${formatNumber(state.prestigePoints)}`;
-  prestigeRequirementEl.textContent = `Requirement: ${formatNumber(getNextPrestigeRequirement())} points`;
-  prestigeCurrentEl.textContent = `Current: ${formatNumber(state.totalEarnedThisRun)}`;
-  prestigeRewardEl.textContent = `Reward: +${(gain * 0.1).toFixed(1)} multiplier`;
+  prestigeLabel.textContent = `Престиж: ${formatNumber(state.prestigePoints)} (x${getPrestigeMultiplier().toFixed(1)})`;
+  prestigeLevelEl.textContent = `Уровень престижа: ${formatNumber(state.prestigePoints)}`;
+  prestigeRequirementEl.textContent = `Требование: ${formatNumber(getNextPrestigeRequirement())} очков`;
+  prestigeCurrentEl.textContent = `Текущий прогресс: ${formatNumber(state.totalEarnedThisRun)}`;
+  prestigeRewardEl.textContent = `Награда: +${(gain * 0.1).toFixed(1)} к множителю`;
   openPrestigeButton.disabled = gain <= 0;
   openPrestigeButton.textContent = gain > 0 ? `${t("prestigeAction")} +${gain}` : t("prestigeNeedMore");
 };
@@ -431,15 +417,15 @@ const resetProgressForPrestige = () => {
 
 // Achievement definitions
 const achievements = [
-  { id: "first-click", label: "First tap!", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
-  { id: "click-fiend", label: "50 clicks", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
-  { id: "tap-machine", label: "500 clicks", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "hundred", label: "100 points", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
-  { id: "five-k", label: "5K points", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
-  { id: "fifty-k", label: "50K points", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
-  { id: "upgrade-hunter", label: "Buy 5 upgrades", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
-  { id: "upgrade-master", label: "Buy 20 upgrades", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
-  { id: "first-auto", label: "Automation online", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
+  { id: "first-click", label: "Первый клик!", type: "clicks", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 120 } },
+  { id: "click-fiend", label: "50 кликов", type: "clicks", target: 50, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 12000 } },
+  { id: "tap-machine", label: "500 кликов", type: "clicks", target: 500, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "hundred", label: "100 очков", type: "score", target: 100, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 180 } },
+  { id: "five-k", label: "5K очков", type: "score", target: 5000, unlocked: false, rewardClaimed: false, reward: { type: "temp_multiplier", multiplier: 1.5, durationMs: 15000 } },
+  { id: "fifty-k", label: "50K очков", type: "score", target: 50000, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 2 } },
+  { id: "upgrade-hunter", label: "Купить 5 улучшений", type: "upgrades", target: 5, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 260 } },
+  { id: "upgrade-master", label: "Купить 20 улучшений", type: "upgrades", target: 20, unlocked: false, rewardClaimed: false, reward: { type: "permanent_click", amount: 1 } },
+  { id: "first-auto", label: "Автоматизация включена", type: "auto", target: 1, unlocked: false, rewardClaimed: false, reward: { type: "coins", amount: 220 } },
 ];
 
 let audioContext;
@@ -560,15 +546,15 @@ const renderAchievements = () => {
       item.classList.add("unlocked");
     }
     const progress = getAchievementProgress(achievement);
-    const progressLabel = achievement.unlocked ? "Unlocked" : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`;
+    const progressLabel = achievement.unlocked ? t("unlocked") : `${formatNumber(Math.min(progress.current, progress.target))}/${formatNumber(progress.target)}`;
     item.innerHTML = `
       <div class="achievement-main-row">
         <span>${achievement.label}</span>
         <span>${progressLabel}</span>
       </div>
       <div class="achievement-reward-row">
-        <span class="achievement-reward-text">Reward: ${getAchievementRewardDescription(achievement)}</span>
-        <span class="achievement-claim-state ${achievement.rewardClaimed ? "claimed" : "unclaimed"}">${achievement.rewardClaimed ? "Claimed" : "Unclaimed"}</span>
+        <span class="achievement-reward-text">${t("reward")}: ${getAchievementRewardDescription(achievement)}</span>
+        <span class="achievement-claim-state ${achievement.rewardClaimed ? "claimed" : "unclaimed"}">${achievement.rewardClaimed ? t("claimed") : t("unclaimed")}</span>
       </div>
     `;
     achievementList.appendChild(item);
@@ -708,12 +694,12 @@ const updateUI = () => {
 
   upgradeClickCostEl.textContent = formatNumber(state.clickUpgradeCost);
   upgradeAutoCostEl.textContent = formatNumber(state.autoUpgradeCost);
-  upgradeClickOwnedEl.textContent = `Owned: ${state.clickUpgradeOwned}`;
-  upgradeAutoOwnedEl.textContent = `Owned: ${state.autoUpgradeOwned}`;
+  upgradeClickOwnedEl.textContent = `Куплено: ${state.clickUpgradeOwned}`;
+  upgradeAutoOwnedEl.textContent = `Куплено: ${state.autoUpgradeOwned}`;
   upgradeCritCostEl.textContent = formatNumber(state.critUpgradeCost);
   upgradeSpeedCostEl.textContent = formatNumber(state.speedUpgradeCost);
-  upgradeCritOwnedEl.textContent = `Owned: ${state.critUpgradeOwned}`;
-  upgradeSpeedOwnedEl.textContent = `Owned: ${state.speedUpgradeOwned}`;
+  upgradeCritOwnedEl.textContent = `Куплено: ${state.critUpgradeOwned}`;
+  upgradeSpeedOwnedEl.textContent = `Куплено: ${state.speedUpgradeOwned}`;
 
   upgradeClickButton.disabled = state.score < state.clickUpgradeCost;
   upgradeAutoButton.disabled = state.score < state.autoUpgradeCost;
@@ -761,7 +747,7 @@ const checkAchievements = () => {
     if (progress.current >= progress.target) {
       achievement.unlocked = true;
       playTone(720, 0.2, "triangle");
-      showToast(`Achievement unlocked: ${achievement.label}`);
+      showToast(`${t("achievementUnlocked")}: ${achievement.label}`);
       applyAchievementReward(achievement);
     }
   });
@@ -797,7 +783,6 @@ const saveGame = () => {
     totalEarnedThisRun: state.totalEarnedThisRun,
     energy: state.energy,
     overloadUntil: state.overloadUntil,
-    locale: state.locale,
     achievementBoostUntil: state.achievementBoostUntil,
   };
 
@@ -842,9 +827,6 @@ const loadGame = () => {
     state.totalEarnedThisRun = safeNumber(payload.totalEarnedThisRun, state.totalEarnedThisRun, 0);
     state.energy = safeNumber(payload.energy, state.energy, 0, 100);
     state.overloadUntil = safeNumber(payload.overloadUntil, state.overloadUntil, 0);
-    if (payload.locale === "ru" || payload.locale === "en") {
-      state.locale = payload.locale;
-    }
     state.achievementBoostUntil = safeNumber(payload.achievementBoostUntil, state.achievementBoostUntil, 0);
 
     if (Array.isArray(payload.achievements)) {
@@ -991,21 +973,13 @@ toggleShopButton.addEventListener("click", () => {
   saveGame();
 });
 
-toggleLocaleButton.addEventListener("click", () => {
-  state.locale = state.locale === "en" ? "ru" : "en";
-  localStorage.setItem(LOCALE_KEY, state.locale);
-  applyStaticLocale();
-  updateUI();
-  logAnalyticsEvent("locale_changed", { locale: state.locale });
-});
-
 openPrestigeButton.addEventListener("click", () => {
   const gain = getPrestigeGain();
   if (gain <= 0) {
-    showToast("Earn more score to unlock prestige");
+    showToast(t("earnMorePrestige"));
     return;
   }
-  prestigeMessage.textContent = `Are you sure? This will reset your progress. You will gain +${gain} prestige points.`;
+  prestigeMessage.textContent = `Вы уверены? Это сбросит прогресс. Вы получите +${gain} очков престижа.`;
   prestigePopup.classList.add("show");
 });
 
@@ -1020,14 +994,14 @@ prestigeConfirmButton.addEventListener("click", () => {
     return;
   }
 
-  const approved = window.confirm(`Confirm prestige reset for +${gain} prestige points?`);
+  const approved = window.confirm(t("prestigeConfirm").replace("{gain}", gain));
   if (!approved) {
     return;
   }
 
   state.prestigePoints += gain;
   prestigePopup.classList.remove("show");
-  showToast(`Prestige +${gain}! Permanent multiplier increased.`);
+  showToast(t("prestigeSuccess").replace("{gain}", gain));
   resetProgressForPrestige();
 });
 
