@@ -1456,12 +1456,3 @@ updateUI();
 saveGame();
 sendGameEvent("session_start", { locale: state.locale });
 requestAnimationFrame(animateParticles);
-// Disable right click menu
-document.addEventListener("contextmenu", function(e) {
-    e.preventDefault();
-});
-
-// Disable text selection mobile
-document.addEventListener("selectstart", function(e) {
-    e.preventDefault();
-});
