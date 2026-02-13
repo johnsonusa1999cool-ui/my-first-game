@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Неоновый кликер</title>
+    <meta name="description" content="Неоновый кликер — динамичная браузерная idle-игра: кликай, улучшай ядро и развивай автоматизацию." />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Неоновый кликер</p>
+          <h1>Кликай. Улучшай. Автоматизируй.</h1>
+          <p class="subhead">Зарабатывай очки, открывай достижения и ускоряй рост ядра.</p>
+        </div>
+        <div class="score-card" aria-live="polite">
+          <span class="label">Очки</span>
+          <span id="score" class="value">0</span>
+          <span class="per-click" id="per-click">+1 за клик</span>
+          <span class="per-second" id="per-second">0 / сек</span>
+          <span class="prestige-label" id="prestige-label">Престиж: 0 (x1.0)</span>
+          <div class="combo">
+            <span id="combo-label">Комбо x1</span>
+            <div class="combo-bar">
+              <span id="combo-fill"></span>
+            </div>
+          </div>
+          <div class="energy-panel">
+            <div class="energy-header">
+              <span>Энергия</span>
+              <span id="energy-status">0%</span>
+            </div>
+            <div class="energy-bar">
+              <span id="energy-fill"></span>
+            </div>
+          </div>
+          <div class="score-actions">
+            <button id="toggle-sound" class="ghost-button" type="button">Звук: Вкл</button>
+            <button id="reset-save" class="ghost-button" type="button">Сбросить сохранение</button>
+            <button id="toggle-shop" class="ghost-button" type="button">Магазин</button>
+          </div>
+
+          <div class="prestige-panel">
+            <p id="prestige-level" class="prestige-stat">Уровень престижа: 0</p>
+            <p id="prestige-requirement" class="prestige-stat">Требование: 50K очков</p>
+            <p id="prestige-current" class="prestige-stat">Текущий прогресс: 0</p>
+            <p id="prestige-reward" class="prestige-stat">Награда: +0.0 к множителю</p>
+            <button id="open-prestige" class="ghost-button" type="button">Нужно больше очков</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="game-layout">
+          <div class="left-panel">
+            <section class="play-area" id="play-area">
+              <div class="playback">
+                <div class="reactor-rings" aria-hidden="true">
+                  <span class="ring ring-outer"></span>
+                  <span class="ring ring-inner"></span>
+                </div>
+                <button id="click-button" class="click-button" aria-label="Нажмите, чтобы получить очки">
+                  <span class="cube-glow" aria-hidden="true"></span>
+                  <span class="cube" aria-hidden="true">
+                    <span class="cube-face cube-front"></span>
+                    <span class="cube-face cube-top"></span>
+                    <span class="cube-face cube-side"></span>
+                    <span class="cube-core"></span>
+                  </span>
+                  <span class="cube-text">ЭНЕРГОЯДРО</span>
+                </button>
+                <canvas id="particle-canvas" class="particle-canvas"></canvas>
+                <div class="floating-points" id="floating-points"></div>
+              </div>
+              <div class="reactor-status" aria-live="polite">
+                <span class="reactor-label">Режим ядра</span>
+                <span id="reactor-state" class="reactor-value">Стабильно</span>
+                <span id="reactor-boost-timer" class="reactor-timer">Зарядите ядро до перегруза</span>
+              </div>
+              <p class="hint">Продолжайте кликать, чтобы открывать достижения и улучшения.</p>
+            </section>
+          </div>
+
+          <div class="center-panel">
+            <section class="achievements" aria-label="Достижения">
+              <h2>Достижения</h2>
+              <ul id="achievement-list" class="achievement-list"></ul>
+            </section>
+            <section class="daily-missions" aria-label="Ежедневные задания">
+              <div class="daily-header">
+                <h2>Ежедневные задания</h2>
+                <span id="mission-reset" class="daily-reset">Сброс ежедневно</span>
+              </div>
+              <ul id="daily-mission-list" class="daily-mission-list"></ul>
+            </section>
+          </div>
+
+          <div class="shop-panel" id="shop-panel">
+            <section class="shop" aria-label="Магазин улучшений">
+              <div class="shop-header">
+                <div>
+                  <h2>Магазин улучшений</h2>
+                  <p>Усиливайте клики и автоматизируйте набор очков.</p>
+                </div>
+                <div class="wallet">
+                  <span class="wallet-label">Монеты</span>
+                  <span id="wallet" class="wallet-value">0</span>
+                </div>
+              </div>
+              <div class="upgrade-grid">
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Сила клика</h3>
+                      <p>Увеличивает очки за клик.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-click-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-click" class="upgrade-button" type="button">
+                    Купить <span id="upgrade-click-cost">10</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Автокликер</h3>
+                      <p>Даёт очки каждую секунду.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-auto-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-auto" class="upgrade-button" type="button">
+                    Купить <span id="upgrade-auto-cost">25</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Критический заряд</h3>
+                      <p>Шанс удвоить силу клика.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-crit-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-crit" class="upgrade-button" type="button">
+                    Купить <span id="upgrade-crit-cost">40</span>
+                  </button>
+                </article>
+                <article class="upgrade-card">
+                  <div class="upgrade-info">
+                    <div>
+                      <h3>Ядро скорости</h3>
+                      <p>Ускоряет анимацию всплеска клика.</p>
+                    </div>
+                    <div class="upgrade-meta">
+                      <span id="upgrade-speed-owned">Куплено: 0</span>
+                      <span class="upgrade-tier">Тир 1</span>
+                    </div>
+                  </div>
+                  <button id="upgrade-speed" class="upgrade-button" type="button">
+                    Купить <span id="upgrade-speed-cost">30</span>
+                  </button>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="achievement-toast" class="toast" aria-live="polite"></div>
+
+    <div id="offline-popup" class="offline-popup" aria-live="polite">
+      <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Offline rewards">
+        <p class="offline-title"><span class="offline-badge">⚡</span> С возвращением, оператор</p>
+        <p class="offline-subtitle">Реактор накопил энергию офлайн</p>
+        <p id="offline-earned" class="offline-earned">0</p>
+        <p id="offline-time" class="offline-time"></p>
+        <button id="offline-claim" class="ghost-button" type="button">Получить награду</button>
+      </div>
+    </div>
+
+    <div id="prestige-popup" class="offline-popup" aria-live="polite">
+      <div class="offline-popup-content">
+        <p class="offline-title">Престиж?</p>
+        <p id="prestige-message">Вы уверены? Это сбросит ваш прогресс.</p>
+        <div class="prestige-actions">
+          <button id="prestige-cancel" class="ghost-button" type="button">Отмена</button>
+          <button id="prestige-confirm" class="ghost-button" type="button">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="achievement-reward-popup" class="offline-popup" aria-live="polite">
+      <div class="offline-popup-content" role="dialog" aria-modal="true" aria-label="Награда за достижение">
+        <p class="offline-title">Награда за достижение</p>
+        <p id="achievement-reward-label" class="offline-subtitle"></p>
+        <p id="achievement-reward-text" class="offline-earned"></p>
+        <button id="achievement-reward-close" class="ghost-button" type="button">Получить</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="https://yandex.ru/games/sdk/v2"></script>
+    <script>
+      (function () {
+        window.gameLang = window.gameLang || "ru";
+
+        if (!window.YaGames || typeof window.YaGames.init !== "function") {
+          return;
+        }
+
+        try {
+          window.YaGames.init()
+            .then((ysdk) => {
+              window.ysdk = ysdk;
+              const detectedLang = (ysdk && ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang) || "ru";
+              window.gameLang = detectedLang;
+
+              if (window.i18n && window.i18n[detectedLang] && typeof window.applyTranslations === "function") {
+                window.applyTranslations(detectedLang);
+              }
+
+              if (ysdk.features && ysdk.features.LoadingAPI && typeof ysdk.features.LoadingAPI.ready === "function") {
+                ysdk.features.LoadingAPI.ready();
+              }
+
+              console.log(`YSdk initialized, lang = ${window.gameLang}`);
+            })
+            .catch((err) => {
+              console.error("YSdk init error:", err);
+              window.gameLang = "ru";
+            });
+        } catch (error) {
+          console.error(error);
+          window.gameLang = "ru";
+        }
+      })();
+    </script>
+  </body>
+</html>
