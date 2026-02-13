@@ -58,6 +58,8 @@ const DAILY_MISSION_KEY = "neon-clicker-daily-missions";
 const OVERLOAD_DURATION_MS = 10000;
 const ANALYTICS_KEY = "neon-clicker-analytics";
 const MAX_ANALYTICS_EVENTS = 200;
+const GAME_EVENT_KEY = "neon-clicker-game-events";
+const MAX_GAME_EVENTS = 300;
 const MAX_PARTICLES = 240;
 
 // Core game state
@@ -95,6 +97,7 @@ let scorePopTimeout;
 let previousScoreLabel = "";
 let dailyMissions = [];
 let lastMissionSignature = "";
+let lastOfflineReward = 0;
 
 const i18n = {
   ru: {
@@ -226,6 +229,38 @@ const logAnalyticsEvent = (name, payload = {}) => {
     localStorage.setItem(ANALYTICS_KEY, JSON.stringify(existing));
   } catch {
     // noop
+  }
+};
+
+const storeGameEventLocally = (name, data = {}) => {
+  try {
+    const existing = JSON.parse(localStorage.getItem(GAME_EVENT_KEY) || "[]");
+    if (!Array.isArray(existing)) {
+      return;
+    }
+    existing.push({ name, data, at: Date.now() });
+    if (existing.length > MAX_GAME_EVENTS) {
+      existing.splice(0, existing.length - MAX_GAME_EVENTS);
+    }
+    localStorage.setItem(GAME_EVENT_KEY, JSON.stringify(existing));
+  } catch {
+    // noop
+  }
+};
+
+const sendGameEvent = (name, data = {}) => {
+  console.log("EVENT", name, data);
+  storeGameEventLocally(name, data);
+
+  const sdk = window.ysdk;
+  if (!sdk || typeof sdk.reportEvent !== "function") {
+    return;
+  }
+
+  try {
+    sdk.reportEvent(name, data);
+  } catch (error) {
+    console.log("ysdk.reportEvent fallback", error);
   }
 };
 
@@ -717,6 +752,7 @@ const checkOfflineEarnings = () => {
 
   if (offlineEarned > 0) {
     const finalOfflineEarned = addScore(offlineEarned);
+    lastOfflineReward = finalOfflineEarned;
     spawnParticles(24);
     showOfflinePopup(finalOfflineEarned, effectiveSeconds);
   }
@@ -942,6 +978,7 @@ clickButton.addEventListener("click", () => {
   const earned = (state.pointsPerClick + comboBonus) * critMultiplier;
   const finalEarned = addScore(earned);
   state.totalClicks += 1;
+  sendGameEvent("click", { totalClicks: state.totalClicks, earned: finalEarned, crit: isCrit });
 
   state.energy = Math.min(100, state.energy + 7 + state.combo * 0.8);
   if (state.energy >= 100) {
@@ -982,6 +1019,7 @@ upgradeClickButton.addEventListener("click", () => {
   playTone(520, 0.18, "square");
   animatePurchase(upgradeClickButton);
   logAnalyticsEvent("upgrade_purchase", { type: "click", owned: state.clickUpgradeOwned });
+  sendGameEvent("upgrade_buy", { type: "click", level: state.clickUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -1000,6 +1038,7 @@ upgradeAutoButton.addEventListener("click", () => {
   playTone(620, 0.2, "square");
   animatePurchase(upgradeAutoButton);
   logAnalyticsEvent("upgrade_purchase", { type: "auto", owned: state.autoUpgradeOwned });
+  sendGameEvent("upgrade_buy", { type: "auto", level: state.autoUpgradeOwned });
   updateUI();
   checkAchievements();
   saveGame();
@@ -1018,6 +1057,7 @@ upgradeCritButton.addEventListener("click", () => {
   playTone(760, 0.2, "triangle");
   animatePurchase(upgradeCritButton);
   logAnalyticsEvent("upgrade_purchase", { type: "crit", owned: state.critUpgradeOwned });
+  sendGameEvent("upgrade_buy", { type: "crit", level: state.critUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -1035,6 +1075,7 @@ upgradeSpeedButton.addEventListener("click", () => {
   playTone(640, 0.16, "square");
   animatePurchase(upgradeSpeedButton);
   logAnalyticsEvent("upgrade_purchase", { type: "speed", owned: state.speedUpgradeOwned });
+  sendGameEvent("upgrade_buy", { type: "speed", level: state.speedUpgradeOwned });
   updateUI();
   saveGame();
 });
@@ -1083,6 +1124,7 @@ prestigeConfirmButton.addEventListener("click", () => {
   }
 
   state.prestigePoints += gain;
+  sendGameEvent("prestige", { gain, prestigePoints: state.prestigePoints });
   prestigePopup.classList.remove("show");
   showToast(t("prestigeSuccess").replace("{gain}", gain));
   resetProgressForPrestige();
@@ -1097,6 +1139,11 @@ achievementRewardClose.addEventListener("click", () => {
 });
 
 offlineClaimButton.addEventListener("click", () => {
+  if (lastOfflineReward > 0) {
+    sendGameEvent("offline_claim", { reward: lastOfflineReward });
+    lastOfflineReward = 0;
+  }
+
   if (offlineCountFrame) {
     cancelAnimationFrame(offlineCountFrame);
   }
@@ -1163,4 +1210,5 @@ renderAchievements();
 applyStaticLocale();
 updateUI();
 saveGame();
+sendGameEvent("session_start", { locale: state.locale });
 requestAnimationFrame(animateParticles);

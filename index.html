@@ -234,6 +234,14 @@
                 ysdk.features.LoadingAPI.ready();
               }
 
+              if (ysdk && typeof ysdk.report === "function") {
+                try {
+                  ysdk.report("game_ready");
+                } catch (reportError) {
+                  console.log("report not available", reportError);
+                }
+              }
+
               console.log(`YSdk initialized, lang = ${window.gameLang}`);
             })
             .catch((err) => {
