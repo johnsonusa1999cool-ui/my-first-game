@@ -1408,56 +1408,23 @@ window.addEventListener("selectstart", (event) => {
   event.preventDefault();
 }, { passive: false });
 
-let touchStartY = 0;
-
-const getShopPanelFromEventTarget = (target) => {
+const isInsideScrollableUi = (target) => {
   if (!(target instanceof Element)) {
-    return null;
-  }
-  return target.closest(".shop-panel");
-};
-
-const canScrollPanel = (panel, deltaY) => {
-  if (!panel) {
     return false;
   }
-
-  const maxScrollTop = panel.scrollHeight - panel.clientHeight;
-  if (maxScrollTop <= 0) {
-    return false;
-  }
-
-  if (deltaY > 0) {
-    return panel.scrollTop < maxScrollTop;
-  }
-  return panel.scrollTop > 0;
+  return !!(target.closest(".shop-panel") || target.closest(".scrollable"));
 };
-
-document.addEventListener("touchstart", (event) => {
-  if (event.touches.length > 0) {
-    touchStartY = event.touches[0].clientY;
-  }
-}, { passive: true });
-
-document.addEventListener("touchmove", (event) => {
-  const panel = getShopPanelFromEventTarget(event.target);
-  const currentY = event.touches.length > 0 ? event.touches[0].clientY : touchStartY;
-  const deltaY = touchStartY - currentY;
-
-  if (panel && canScrollPanel(panel, deltaY)) {
-    return;
-  }
-
-  event.preventDefault();
-}, { passive: false });
 
 document.addEventListener("wheel", (event) => {
-  const panel = getShopPanelFromEventTarget(event.target);
-  if (panel && canScrollPanel(panel, event.deltaY)) {
-    return;
+  if (!isInsideScrollableUi(event.target)) {
+    event.preventDefault();
   }
+}, { passive: false });
 
-  event.preventDefault();
+document.addEventListener("touchmove", (event) => {
+  if (!isInsideScrollableUi(event.target)) {
+    event.preventDefault();
+  }
 }, { passive: false });
 
 window.addEventListener("beforeunload", () => {
