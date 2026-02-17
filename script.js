@@ -1408,25 +1408,6 @@ window.addEventListener("selectstart", (event) => {
   event.preventDefault();
 }, { passive: false });
 
-const isInsideScrollableUi = (target) => {
-  if (!(target instanceof Element)) {
-    return false;
-  }
-  return !!(target.closest(".shop-panel") || target.closest(".scrollable"));
-};
-
-document.addEventListener("wheel", (event) => {
-  if (!isInsideScrollableUi(event.target)) {
-    event.preventDefault();
-  }
-}, { passive: false });
-
-document.addEventListener("touchmove", (event) => {
-  if (!isInsideScrollableUi(event.target)) {
-    event.preventDefault();
-  }
-}, { passive: false });
-
 window.addEventListener("beforeunload", () => {
   localStorage.setItem(LAST_PLAYED_KEY, String(Date.now()));
 });
