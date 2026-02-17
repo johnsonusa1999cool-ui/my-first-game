@@ -124,6 +124,8 @@ let dailyMissions = [];
 let lastMissionSignature = "";
 let dailyLastReset = Date.now();
 let lastOfflineReward = 0;
+let gameStarted = false;
+let gameReadySent = false;
 
 const i18n = {
   ru: {
@@ -1496,15 +1498,55 @@ setInterval(() => {
 
 window.addEventListener("resize", resizeCanvas);
 
-resolveInitialLocale();
-hydrateDailyMissions();
-loadGame();
-checkOfflineEarnings();
-displayedScore = state.score;
-resizeCanvas();
-renderAchievements();
-applyStaticLocale();
-updateUI();
-saveGame();
-sendGameEvent("session_start", { locale: state.locale });
-requestAnimationFrame(animateParticles);
+const notifyGameReady = () => {
+  if (gameReadySent) {
+    return;
+  }
+
+  const sdk = window.ysdk;
+  if (!sdk || !sdk.features || !sdk.features.LoadingAPI || typeof sdk.features.LoadingAPI.ready !== "function") {
+    return;
+  }
+
+  try {
+    sdk.features.LoadingAPI.ready();
+    gameReadySent = true;
+
+    if (typeof sdk.report === "function") {
+      try {
+        sdk.report("game_ready");
+      } catch (reportError) {
+        console.log("report not available", reportError);
+      }
+    }
+  } catch (error) {
+    console.error("LoadingAPI.ready error:", error);
+  }
+};
+
+const initGame = () => {
+  resolveInitialLocale();
+  hydrateDailyMissions();
+  loadGame();
+  checkOfflineEarnings();
+  displayedScore = state.score;
+  resizeCanvas();
+  renderAchievements();
+  applyStaticLocale();
+  updateUI();
+  saveGame();
+  sendGameEvent("session_start", { locale: state.locale });
+  requestAnimationFrame(animateParticles);
+};
+
+const startGame = () => {
+  if (gameStarted) {
+    return;
+  }
+
+  gameStarted = true;
+  initGame();
+  notifyGameReady();
+};
+
+window.startGame = startGame;

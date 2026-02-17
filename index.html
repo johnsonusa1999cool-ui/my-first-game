@@ -273,16 +273,26 @@
     <script src="https://yandex.ru/games/sdk/v2"></script>
     <script>
       (function () {
+        let ysdk;
         window.gameLang = window.gameLang || "ru";
 
+        const safeStartGame = () => {
+          if (typeof window.startGame === "function") {
+            window.startGame();
+          }
+        };
+
         if (!window.YaGames || typeof window.YaGames.init !== "function") {
+          safeStartGame();
           return;
         }
 
         try {
           window.YaGames.init()
-            .then((ysdk) => {
+            .then((sdk) => {
+              ysdk = sdk;
               window.ysdk = ysdk;
+
               const detectedLang = (ysdk && ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang) || "ru";
               window.gameLang = detectedLang;
 
@@ -290,27 +300,18 @@
                 window.applyTranslations(detectedLang);
               }
 
-              if (ysdk.features && ysdk.features.LoadingAPI && typeof ysdk.features.LoadingAPI.ready === "function") {
-                ysdk.features.LoadingAPI.ready();
-              }
-
-              if (ysdk && typeof ysdk.report === "function") {
-                try {
-                  ysdk.report("game_ready");
-                } catch (reportError) {
-                  console.log("report not available", reportError);
-                }
-              }
-
+              safeStartGame();
               console.log(`YSdk initialized, lang = ${window.gameLang}`);
             })
             .catch((err) => {
               console.error("YSdk init error:", err);
               window.gameLang = "ru";
+              safeStartGame();
             });
         } catch (error) {
           console.error(error);
           window.gameLang = "ru";
+          safeStartGame();
         }
       })();
     </script>
