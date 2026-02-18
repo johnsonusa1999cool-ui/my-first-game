@@ -1400,6 +1400,109 @@ offlineClaimButton.addEventListener("click", () => {
   }, 220);
 });
 
+
+/* UI panel toggle: added for Yandex single-screen requirement */
+(() => {
+  const btnShop = document.getElementById("btn-shop");
+  const btnAch = document.getElementById("btn-achievements");
+  const btnMis = document.getElementById("btn-missions");
+  const legacyShopToggle = document.getElementById("toggle-shop");
+
+  const backdrop = document.getElementById("panel-backdrop");
+  const shopPanel = document.getElementById("shop-panel");
+  const achPanel = document.getElementById("achievements-panel");
+  const misPanel = document.getElementById("missions-panel");
+
+  const panels = [shopPanel, achPanel, misPanel].filter(Boolean);
+
+  const showBackdrop = () => {
+    if (!backdrop) return;
+    backdrop.classList.remove("hidden");
+    requestAnimationFrame(() => backdrop.classList.add("visible"));
+  };
+
+  const hideBackdrop = () => {
+    if (!backdrop) return;
+    backdrop.classList.remove("visible");
+    setTimeout(() => backdrop.classList.add("hidden"), 300);
+  };
+
+  const openPanel = (panel) => {
+    if (!panel) return;
+    panels.forEach((p) => {
+      p.classList.remove("visible");
+      p.classList.add("hidden");
+      p.setAttribute("aria-hidden", "true");
+    });
+
+    showBackdrop();
+    panel.classList.remove("hidden");
+    requestAnimationFrame(() => panel.classList.add("visible"));
+    panel.setAttribute("aria-hidden", "false");
+  };
+
+  const closeAllPanels = () => {
+    panels.forEach((p) => {
+      p.classList.remove("visible");
+      p.setAttribute("aria-hidden", "true");
+      setTimeout(() => p.classList.add("hidden"), 320);
+    });
+    hideBackdrop();
+  };
+
+  const bindOpen = (button, panel) => {
+    if (!button || !panel) return;
+    button.addEventListener("click", () => {
+      if (panel.classList.contains("visible")) {
+        const content = panel.querySelector(".panel-content");
+        if (content) {
+          content.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        return;
+      }
+      openPanel(panel);
+    });
+  };
+
+  bindOpen(btnShop, shopPanel);
+  bindOpen(btnAch, achPanel);
+  bindOpen(btnMis, misPanel);
+  bindOpen(legacyShopToggle, shopPanel);
+
+  document.querySelectorAll(".panel-close").forEach((button) => {
+    button.addEventListener("click", closeAllPanels);
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeAllPanels);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAllPanels();
+    }
+  });
+
+  let touchStartX = 0;
+  const onTouchStart = (event) => {
+    if (event.touches.length > 0) {
+      touchStartX = event.touches[0].clientX;
+    }
+  };
+  const onTouchMove = (event) => {
+    if (event.touches.length === 0) return;
+    const deltaX = event.touches[0].clientX - touchStartX;
+    if (deltaX > 100) {
+      closeAllPanels();
+    }
+  };
+
+  panels.forEach((panel) => {
+    panel.addEventListener("touchstart", onTouchStart, { passive: true });
+    panel.addEventListener("touchmove", onTouchMove, { passive: true });
+  });
+})();
+
 window.addEventListener("contextmenu", (event) => {
   event.preventDefault();
 }, { passive: false });
